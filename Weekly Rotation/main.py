@@ -1,6 +1,6 @@
 from QuantConnect import Resolution
 from QuantConnect.Algorithm import QCAlgorithm
-from QuantConnect.Indicators import RelativeStrengthIndex
+from QuantConnect.Indicators import RelativeStrengthIndex, RateOfChange
 
 
 class WeeklyRotation(QCAlgorithm):
