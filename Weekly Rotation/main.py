@@ -6,7 +6,7 @@ from QuantConnect.Indicators import RelativeStrengthIndex, RateOfChange, SimpleM
 class WeeklyRotation(QCAlgorithm):
 
     def Initialize(self):
-        self.SetStartDate(2021, 1, 1)
+        self.SetStartDate(2020, 1, 1)
         self.SetEndDate(2022, 1, 1)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
@@ -25,11 +25,12 @@ class WeeklyRotation(QCAlgorithm):
         stocks = []
         for stock in sorted(coarse, key=lambda x: x.DollarVolume, reverse=True)[:100]:
             symbol = stock.Symbol
-            if symbol not in self.averages and symbol != self.spy.Symbol:
-                history = self.History(symbol, 200, Resolution.Daily)
-                self.averages[symbol] = SelectionData(history)
-                self.averages[symbol].update(self.Time, stock.Price)
-                stocks.append(stock)
+            if symbol == self.spy.Symbol:
+                continue
+            if symbol not in self.averages:
+                self.averages[symbol] = SelectionData(self.History(symbol, 200, Resolution.Daily))
+            self.averages[symbol].update(self.Time, stock.Price)
+            stocks.append(stock)
         stocks = sorted(stocks, key=lambda stock: self.averages[stock.Symbol].roc, reverse=True)[:10]
         return [stock.Symbol for stock in stocks]
 
