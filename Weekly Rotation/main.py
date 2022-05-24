@@ -1,6 +1,7 @@
 from QuantConnect import Resolution
 from QuantConnect.Algorithm import QCAlgorithm
-from QuantConnect.Indicators import RelativeStrengthIndex, RateOfChange, SimpleMovingAverage
+from QuantConnect.Indicators import RelativeStrengthIndex, RateOfChange, SimpleMovingAverage, ExponentialMovingAverage, \
+    RollingWindow, IndicatorDataPoint
 
 
 class WeeklyRotation(QCAlgorithm):
@@ -66,7 +67,8 @@ class WeeklyRotation(QCAlgorithm):
                 self.Liquidate(security.Symbol)
         for symbol in self.ActiveSecurities.Keys:
             if symbol != self.spy.Symbol and not self.ActiveSecurities[symbol].Invested and \
-                    self.averages[symbol].is_ready() and self.averages[symbol].rsi.Current.Value < 50:
+                    self.averages[symbol].is_ready() and self.averages[symbol].rsi.Current.Value < 50\
+                    and self.averages[symbol].ema_increasing:
                 self.SetHoldings(symbol, 0.1)
         self._changes = None
 
@@ -78,10 +80,14 @@ class SelectionData():
     def __init__(self, history):
         self.rsi = RelativeStrengthIndex(3)
         self.roc = RateOfChange(200)
+        self.ema_21 = ExponentialMovingAverage(21)
+        self.ema_window = RollingWindow[IndicatorDataPoint](3)
+        self.ema_21.Updated += self.ema_updated
 
         for data in history.itertuples():
             self.rsi.Update(data.Index[1], data.close)
             self.roc.Update(data.Index[1], data.close)
+            self.ema_21.Update(data.Index[1], data.close)
 
     def is_ready(self):
         return self.rsi.IsReady and self.roc.IsReady
@@ -89,6 +95,14 @@ class SelectionData():
     def update(self, time, price):
         self.rsi.Update(time, price)
         self.roc.Update(time, price)
+        self.ema_21.Update(time, price)
+
+    def ema_updated(self, sender, updated):
+        self.ema_window.Add(updated)
+
+    @property
+    def ema_increasing(self):
+        return self.ema_window[0] > self.ema_window[2]
 
 
 class SPYSelectionData():
