@@ -1,3 +1,6 @@
 /venv
 /data
 lean.json
+*/backtests
+*/.idea
+*/.vscode
