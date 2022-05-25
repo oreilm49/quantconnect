@@ -3,10 +3,10 @@ from QuantConnect.Algorithm import QCAlgorithm
 from QuantConnect.Indicators import RelativeStrengthIndex, RateOfChange, SimpleMovingAverage
 
 
-class WeeklyRotation(QCAlgorithm):
+class NewHighBreakout(QCAlgorithm):
 
     def Initialize(self):
-        self.SetStartDate(2020, 1, 1)
+        self.SetStartDate(2021, 1, 1)
         self.SetEndDate(2022, 1, 1)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
@@ -28,7 +28,8 @@ class WeeklyRotation(QCAlgorithm):
             if symbol == self.spy.Symbol:
                 continue
             if symbol not in self.averages:
-                self.averages[symbol] = SelectionData(self.History(symbol, 200, Resolution.Daily))
+                history = self.History(symbol, 200, Resolution.Daily)
+                self.averages[symbol] = SelectionData(history)
             self.averages[symbol].update(self.Time, stock.Price)
             stocks.append(stock)
         stocks = sorted(stocks, key=lambda stock: self.averages[stock.Symbol].roc, reverse=True)[:10]
@@ -61,19 +62,15 @@ class WeeklyRotation(QCAlgorithm):
 
 class SelectionData():
     def __init__(self, history):
-        self.rsi = RelativeStrengthIndex(3)
-        self.roc = RateOfChange(200)
-
+        self.max = MAX(200)
         for data in history.itertuples():
-            self.rsi.Update(data.Index[1], data.close)
-            self.roc.Update(data.Index[1], data.close)
+            self.max.Update(data.Index[1], data.close)
 
     def is_ready(self):
-        return self.rsi.IsReady and self.roc.IsReady
+        return self.max.IsReady
 
     def update(self, time, price):
-        self.rsi.Update(time, price)
-        self.roc.Update(time, price)
+        self.max.Update(time, price)
 
 
 class SPYSelectionData():
