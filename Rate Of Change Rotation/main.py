@@ -32,7 +32,7 @@ class RocRotation(QCAlgorithm):
             if symbol == self.spy.Symbol:
                 continue
             if symbol not in self.averages:
-                self.averages[symbol] = SelectionData(self.History(symbol, 200, Resolution.Daily))
+                self.averages[symbol] = SelectionData(self.History(symbol, 50, Resolution.Daily))
             self.averages[symbol].update(self.Time, stock.Price)
             if self.averages[symbol].ma_50.Current.Value > stock.Price:
                 stocks.append(stock)
@@ -67,7 +67,7 @@ class RocRotation(QCAlgorithm):
 class SelectionData():
     def __init__(self, history):
         self.rsi = RelativeStrengthIndex(3)
-        self.roc = RateOfChange(200)
+        self.roc = RateOfChange(50)
         self.ma_50 = SimpleMovingAverage(50)
 
         for data in history.itertuples():
