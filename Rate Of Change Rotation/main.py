@@ -19,8 +19,9 @@ class RocRotation(QCAlgorithm):
         self._changes = None
 
     def update_spy(self):
-        history = self.History(self.spy.Symbol, 200, Resolution.Daily)
-        self.averages[self.spy.Symbol] = SPYSelectionData(history)
+        if self.spy.Symbol not in self.averages:
+            history = self.History(self.spy.Symbol, 50, Resolution.Daily)
+            self.averages[self.spy.Symbol] = SPYSelectionData(history)
         self.averages[self.spy.Symbol].update(self.Time, self.spy.Price)
 
     def coarse_selection(self, coarse):
