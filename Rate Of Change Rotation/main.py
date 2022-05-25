@@ -34,7 +34,7 @@ class RocRotation(QCAlgorithm):
             if symbol not in self.averages:
                 self.averages[symbol] = SelectionData(self.History(symbol, 50, Resolution.Daily))
             self.averages[symbol].update(self.Time, stock.Price)
-            if self.averages[symbol].ma_50.Current.Value > stock.Price:
+            if stock.Price > self.averages[symbol].ma_50.Current.Value:
                 stocks.append(stock)
         stocks = sorted(stocks, key=lambda stock: self.averages[stock.Symbol].roc, reverse=True)[:10]
         return [stock.Symbol for stock in stocks]
