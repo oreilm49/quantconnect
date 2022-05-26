@@ -1,15 +1,17 @@
 #region imports
 from AlgorithmImports import *
 #endregion
-from QuantConnect import Resolution
+from QuantConnect import Resolution, AccountType
 from QuantConnect.Algorithm import QCAlgorithm
+from QuantConnect.Brokerages import BrokerageName
 from QuantConnect.Indicators import RelativeStrengthIndex, RateOfChange, SimpleMovingAverage
 
 
 class RocRotation(QCAlgorithm):
 
     def Initialize(self):
-        self.SetStartDate(2002, 1, 1)
+        self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
+        self.SetStartDate(2021, 1, 1)
         self.SetEndDate(2022, 1, 1)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
@@ -57,7 +59,9 @@ class RocRotation(QCAlgorithm):
         for symbol in self.ActiveSecurities.Keys:
             if symbol != self.spy.Symbol and not self.ActiveSecurities[symbol].Invested and \
                     self.averages[symbol].is_ready() and self.averages[symbol].rsi.Current.Value < 50:
-                self.SetHoldings(symbol, 0.1)
+                position_value = self.Portfolio.TotalPortfolioValue / 10
+                if position_value < self.Portfolio.Cash:
+                    self.MarketOrder(symbol, int(position_value / self.ActiveSecurities[symbol].Price))
         self._changes = None
 
     def OnSecuritiesChanged(self, changes):
