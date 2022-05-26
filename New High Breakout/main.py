@@ -35,6 +35,8 @@ class NewHighBreakout(QCAlgorithm):
             self.averages[symbol].update(self.Time, stock)
             if stock.Price > self.averages[symbol].ma.Current.Value:
                 stocks.append(stock)
+        for removed in set(self.averages.keys()).difference(set(stocks)):
+            del self.averages[removed]
         stocks = sorted(stocks, key=lambda stock: self.averages[stock.Symbol].roc, reverse=True)[:10]
         return [stock.Symbol for stock in stocks]
 
