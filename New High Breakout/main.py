@@ -1,3 +1,6 @@
+#region imports
+from AlgorithmImports import *
+#endregion
 from QuantConnect import Resolution
 from QuantConnect.Algorithm import QCAlgorithm
 from QuantConnect.Brokerages import BrokerageName
@@ -8,7 +11,7 @@ class NewHighBreakout(QCAlgorithm):
 
     def Initialize(self):
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
-        self.SetStartDate(2021, 1, 1)
+        self.SetStartDate(2012, 1, 1)
         self.SetEndDate(2022, 1, 1)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
@@ -35,8 +38,6 @@ class NewHighBreakout(QCAlgorithm):
             self.averages[symbol].update(self.Time, stock)
             if stock.Price > self.averages[symbol].ma.Current.Value:
                 stocks.append(stock)
-        for removed in set(self.averages.keys()).difference(set(stocks)):
-            del self.averages[removed]
         stocks = sorted(stocks, key=lambda stock: self.averages[stock.Symbol].roc, reverse=True)[:10]
         return [stock.Symbol for stock in stocks]
 
@@ -53,12 +54,15 @@ class NewHighBreakout(QCAlgorithm):
             if symbol == self.spy.Symbol:
                 continue
             if self.ActiveSecurities[symbol].Invested:
-                if self.averages[symbol].is_ready() and \
-                        self.ActiveSecurities[symbol].Close < self.averages[symbol].ma.Current.Value:
+                if self.Portfolio[symbol].UnrealizedProfitPercent >= 0.20 or \
+                    self.Portfolio[symbol].UnrealizedProfitPercent <= -0.8 or \
+                    self.ActiveSecurities[symbol].Close < self.averages[symbol].ma.Current.Value:
                     self.Liquidate(symbol)
             else:
-                if self.averages[symbol].is_ready() and \
-                        self.ActiveSecurities[symbol].Close >= self.averages[symbol].highs.Current.Value:
+                high = Maximum(50)
+                for data in self.History(symbol, 50, Resolution.Daily).itertuples():
+                    high.Update(data.Index[1], data.high)
+                if self.ActiveSecurities[symbol].Close >= high.Current.Value:
                     position_value = self.Portfolio.TotalPortfolioValue / 10
                     if position_value < self.Portfolio.Cash:
                         self.MarketOrder(symbol, int(position_value / self.ActiveSecurities[symbol].Price))
@@ -68,20 +72,17 @@ class SelectionData():
     def __init__(self, history):
         self.roc = RateOfChange(50)
         self.ma = SimpleMovingAverage(50)
-        self.highs = Maximum(50)
 
         for data in history.itertuples():
             self.roc.Update(data.Index[1], data.close)
             self.ma.Update(data.Index[1], data.close)
-            self.highs.Update(data.Index[1], data.high)
 
     def is_ready(self):
         return self.roc.IsReady and self.ma.IsReady
 
     def update(self, time, stock):
-        self.roc.Update(time, stock.price)
-        self.ma.Update(time, stock.price)
-        self.highs.Update(time, stock.high)
+        self.roc.Update(time, stock.Price)
+        self.ma.Update(time, stock.Price)
 
 
 class SPYSelectionData():
