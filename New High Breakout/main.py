@@ -14,6 +14,7 @@ class NewHighBreakout(QCAlgorithm):
         self.SetStartDate(2012, 1, 1)
         self.SetEndDate(2022, 1, 1)
         self.SetCash(10000)
+        self.SetWarmUp(200, Resolution.Daily)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.spy = self.AddEquity("SPY", Resolution.Daily)
         self.AddUniverse(self.coarse_selection)
@@ -36,16 +37,17 @@ class NewHighBreakout(QCAlgorithm):
             if symbol not in self.averages:
                 self.averages[symbol] = SelectionData(self.History(symbol, 50, Resolution.Daily))
             self.averages[symbol].update(self.Time, stock)
-            if stock.Price > self.averages[symbol].ma.Current.Value:
-                stocks.append(stock)
-        stocks = sorted(stocks, key=lambda stock: self.averages[stock.Symbol].roc, reverse=True)[:10]
-        return [stock.Symbol for stock in stocks]
+            if self.averages[symbol].is_ready() and stock.Price > self.averages[symbol].ma.Current.Value:
+                stocks.append(symbol)
+        return stocks
 
     @property
     def spy_downtrending(self) -> bool:
         return self.averages[self.spy.Symbol].ma.Current.Value > self.spy.Price
 
     def OnData(self, slice) -> None:
+        if self.IsWarmingUp:
+            return
         if self.spy_downtrending:
             for security in self.Portfolio.Securities.keys():
                 self.Liquidate(self.Portfolio.Securities[security].Symbol)
@@ -59,13 +61,15 @@ class NewHighBreakout(QCAlgorithm):
                     self.ActiveSecurities[symbol].Close < self.averages[symbol].ma.Current.Value:
                     self.Liquidate(symbol)
             else:
-                high = Maximum(50)
-                for data in self.History(symbol, 50, Resolution.Daily).itertuples():
-                    high.Update(data.Index[1], data.high)
+                high = Maximum(100)
+                for data in self.History(symbol, 100, Resolution.Daily).itertuples():
+                    if self.Time != data.Index[1]:
+                        high.Update(data.Index[1], data.high)
                 if self.ActiveSecurities[symbol].Close >= high.Current.Value:
-                    position_value = self.Portfolio.TotalPortfolioValue / 10
-                    if position_value < self.Portfolio.Cash:
-                        self.MarketOrder(symbol, int(position_value / self.ActiveSecurities[symbol].Price))
+                    if high.PeriodsSinceMaximum >= 25:
+                        position_value = self.Portfolio.TotalPortfolioValue / 10
+                        if position_value < self.Portfolio.Cash:
+                            self.MarketOrder(symbol, int(position_value / self.ActiveSecurities[symbol].Price))
 
 
 class SelectionData():
