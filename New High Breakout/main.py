@@ -57,7 +57,7 @@ class NewHighBreakout(QCAlgorithm):
                 continue
             if self.ActiveSecurities[symbol].Invested:
                 if self.Portfolio[symbol].UnrealizedProfitPercent >= 0.20 or \
-                    self.Portfolio[symbol].UnrealizedProfitPercent <= -0.8 or \
+                    self.Portfolio[symbol].UnrealizedProfitPercent <= -0.08 or \
                     self.ActiveSecurities[symbol].Close < self.averages[symbol].ma.Current.Value:
                     self.Liquidate(symbol)
             else:
