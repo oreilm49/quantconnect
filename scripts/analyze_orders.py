@@ -15,66 +15,83 @@ class Position:
     symbol: str
     price: float
     size: float
-    type: str
-    status: str
     value: float
     quantity_sold: float
-    profit: float
+    value_sold: float
 
     @property
     def liquidated(self) -> bool:
-        return (self.size - self.quantity_sold) == 0
+        return self.size == self.quantity_sold
 
     def sell(self, data: pd.Series) -> None:
-        self.quantity_sold += data.Quantity
-        self.profit += (data.Value * -1)
+        self.quantity_sold += (data.Quantity * -1)
+        self.value_sold += (data.Value * -1)
 
     def add(self, data: pd.Series) -> None:
         self.value += data.Value
         self.size += data.Quantity
         self.price = self.value / self.size
 
-    def __getitem__(self, key):
-        return getattr(self, key)
+    @property
+    def profit(self) -> float:
+        return self.value_sold - self.value
 
-    def keys(self):
-        return 'start', 'end', 'symbol', 'price', 'size', 'type', 'status', 'value', 'quantity_sold', 'profit',
+    @property
+    def profit_pc(self) -> float:
+        return (self.profit / self.value_sold) * 100 if self.value_sold else 0
+
+    @property
+    def days(self) -> Optional[int]:
+        return (self.end - self.start).days if self.end else "-"
+
+    def close(self, data: pd.Series) -> None:
+        self.end = data.Time
+
+    def get_values(self, names: list[str]):
+        return [getattr(self, name) for name in names]
 
 
 def analyze_orders() -> None:
-    folder_path = ""
+    folder_path = Path(Path().absolute(), 'backtest_reports')
     files = os.listdir(folder_path)
     for filename in files:
         name, ending = filename.split(".")
-        analyzed_filename = f"{name}_analyzed.csv"
-        if ending == 'csv' and analyzed_filename not in files:
+        if ending == 'csv' and '_analyzed' not in name:
             orders = pd.read_csv(Path(folder_path, filename))
+            orders['Time'] = pd.to_datetime(orders['Time'])
             open_positions: dict[str, Position] = {}
             closed_positions: list[Position] = []
             for index, data in orders[orders.Status == 'Filled'].iterrows():
                 if data.Quantity < 0:
                     open_positions[data.Symbol].sell(data)
                     if open_positions[data.Symbol].liquidated:
+                        open_positions[data.Symbol].close(data)
                         closed_positions.append(open_positions.pop(data.Symbol))
                 else:
                     if data.Symbol not in open_positions:
                         open_positions[data.Symbol] = Position(
-                            start=index,
+                            start=data.Time,
                             end=None,
                             symbol=data.Symbol,
                             price=data.Price,
                             size=data.Quantity,
-                            type=data.Type,
-                            status=data.Status,
                             value=data.Value,
                             quantity_sold=0,
-                            profit=0,
+                            value_sold=0,
                         )
                     else:
                         open_positions[data.Symbol].add(data)
-            if not closed_positions and not open_positions:
+            positions = [*closed_positions, *open_positions.values()]
+            if not positions:
                 continue
-            with open(f"{folder_path}/{analyzed_filename}", 'w', encoding='UTF8', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=closed_positions[0].keys())
-                writer.writeheader()
-                writer.writerows(closed_positions)
+            with open(Path(folder_path, f"{name}_analyzed.csv"), 'w', encoding='UTF8', newline='') as f:
+                writer = csv.writer(f)
+                headers = ['start', 'end', 'symbol', 'price', 'size', 'value', 'quantity_sold', 'value_sold', 'profit', 'profit_pc', 'days']
+                writer.writerow(headers)
+                position: Position
+                for position in positions:
+                    writer.writerow(position.get_values(headers))
+
+
+if __name__ == "__main__":
+    analyze_orders()
