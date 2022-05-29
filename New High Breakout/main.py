@@ -21,6 +21,7 @@ class NewHighBreakout(QCAlgorithm):
         self.AddUniverse(self.coarse_selection)
         self.averages = {}
         self._changes = None
+        self.EQUITY_RISK_PC = 0.01
 
     def update_spy(self):
         if self.spy.Symbol not in self.averages:
@@ -66,15 +67,21 @@ class NewHighBreakout(QCAlgorithm):
                     self.Liquidate(symbol)
             else:
                 high = Maximum(100)
+                atr = AverageTrueRange(21)
                 for data in self.History(symbol, 100, Resolution.Daily).itertuples():
                     if self.Time != data.Index[1]:
                         high.Update(data.Index[1], data.high)
+                    atr.Update(data.Index[1], data.close)
                 if self.ActiveSecurities[symbol].Close >= high.Current.Value:
                     if high.PeriodsSinceMaximum >= 25:
-                        position_value = self.Portfolio.TotalPortfolioValue / 10
+                        position_size = self.calculate_position_size(atr.Current.Value)
+                        position_value = position_size * self.ActiveSecurities[symbol].Price
                         if position_value < self.Portfolio.Cash:
-                            self.MarketOrder(symbol, int(position_value / self.ActiveSecurities[symbol].Price))
+                            self.MarketOrder(symbol, position_size)
                             self.ObjectStore.Save(str(symbol), str(self.Time))
+
+    def calculate_position_size(self, atr):
+        return round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / atr)
 
     def Liquidate(self, symbol=None, tag: str = "Liquidated"):
         self.ObjectStore.Delete(str(symbol))
