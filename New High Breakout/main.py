@@ -30,6 +30,8 @@ class NewHighBreakout(QCAlgorithm):
     def coarse_selection(self, coarse):
         self.update_spy()
         stocks = []
+        stock: CoarseFundamental
+        coarse = [stock for stock in coarse if stock.Price > 10 and stock.Market == Market.USA and stock.HasFundamentalData]
         for stock in sorted(coarse, key=lambda x: x.DollarVolume, reverse=True)[:100]:
             symbol = stock.Symbol
             if symbol == self.spy.Symbol:
