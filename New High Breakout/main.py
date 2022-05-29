@@ -5,6 +5,7 @@ from QuantConnect import Resolution
 from QuantConnect.Algorithm import QCAlgorithm
 from QuantConnect.Brokerages import BrokerageName
 from QuantConnect.Indicators import SimpleMovingAverage, RateOfChange, Maximum
+from dateutil.parser import parse
 
 
 class NewHighBreakout(QCAlgorithm):
@@ -60,7 +61,8 @@ class NewHighBreakout(QCAlgorithm):
             if self.ActiveSecurities[symbol].Invested:
                 if self.Portfolio[symbol].UnrealizedProfitPercent >= 0.20 or \
                     self.Portfolio[symbol].UnrealizedProfitPercent <= -0.08 or \
-                    self.ActiveSecurities[symbol].Close < self.averages[symbol].ma.Current.Value:
+                        self.ActiveSecurities[symbol].Close < self.averages[symbol].ma.Current.Value or \
+                            (self.Time - parse(self.ObjectStore.Read(str(symbol)))).days >= 120:
                     self.Liquidate(symbol)
             else:
                 high = Maximum(100)
@@ -72,6 +74,12 @@ class NewHighBreakout(QCAlgorithm):
                         position_value = self.Portfolio.TotalPortfolioValue / 10
                         if position_value < self.Portfolio.Cash:
                             self.MarketOrder(symbol, int(position_value / self.ActiveSecurities[symbol].Price))
+                            self.ObjectStore.Save(str(symbol), str(self.Time))
+
+    def Liquidate(self, symbol=None, tag: str = "Liquidated"):
+        self.ObjectStore.Delete(str(symbol))
+        liquidated = super().Liquidate(symbol, tag)
+        return liquidated
 
 
 class SelectionData():
