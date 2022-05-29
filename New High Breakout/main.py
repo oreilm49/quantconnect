@@ -51,6 +51,14 @@ class NewHighBreakout(QCAlgorithm):
     def spy_downtrending(self) -> bool:
         return self.averages[self.spy.Symbol].ma.Current.Value > self.spy.Price
 
+    def position_outdated(self, symbol) -> bool:
+        """
+        Checks if the position is too old, or if it's time isn't stored
+        """
+        if self.ObjectStore.ContainsKey(str(symbol)):
+            return (self.Time - parse(self.ObjectStore.Read(str(symbol)))).days >= 120
+        return True
+
     def OnData(self, slice) -> None:
         if self.IsWarmingUp:
             return
@@ -65,7 +73,7 @@ class NewHighBreakout(QCAlgorithm):
                 if self.Portfolio[symbol].UnrealizedProfitPercent >= 0.20 or \
                     self.Portfolio[symbol].UnrealizedProfitPercent <= -0.08 or \
                         self.ActiveSecurities[symbol].Close < self.averages[symbol].ma.Current.Value or \
-                            (self.Time - parse(self.ObjectStore.Read(str(symbol)))).days >= 120:
+                            self.position_outdated(symbol):
                     self.Liquidate(symbol)
             else:
                 high = Maximum(100)
@@ -88,7 +96,8 @@ class NewHighBreakout(QCAlgorithm):
         return round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / atr)
 
     def Liquidate(self, symbol=None, tag: str = "Liquidated"):
-        self.ObjectStore.Delete(str(symbol))
+        if self.ObjectStore.ContainsKey(str(symbol)):
+            self.ObjectStore.Delete(str(symbol))
         liquidated = super().Liquidate(symbol, tag)
         return liquidated
 
