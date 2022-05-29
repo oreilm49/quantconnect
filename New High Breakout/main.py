@@ -1,4 +1,6 @@
 #region imports
+from datetime import timedelta
+
 from AlgorithmImports import *
 #endregion
 from QuantConnect import Resolution
@@ -71,7 +73,9 @@ class NewHighBreakout(QCAlgorithm):
                 for data in self.History(symbol, 100, Resolution.Daily).itertuples():
                     if self.Time != data.Index[1]:
                         high.Update(data.Index[1], data.high)
-                    atr.Update(data.Index[1], data.close)
+                    atr.Update(
+                        TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
+                    )
                 if self.ActiveSecurities[symbol].Close >= high.Current.Value:
                     if high.PeriodsSinceMaximum >= 25:
                         position_size = self.calculate_position_size(atr.Current.Value)
