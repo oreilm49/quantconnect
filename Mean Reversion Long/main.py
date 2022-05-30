@@ -26,8 +26,8 @@ class MeanReversionLong(QCAlgorithm):
             if symbol not in self.averages:
                 self.averages[symbol] = SelectionData(self.History(symbol, 150, Resolution.Daily))
             self.averages[symbol].update(self.Time, stock)
-            if self.averages[symbol].is_ready() and stock.Price > self.averages[symbol].ma.Current.Value and \
-                self.averages[symbol].rsi.Current.Value <= 30:
+            if self.averages[symbol].is_ready() and stock.Price > self.averages[symbol].ma.Current.Value < \
+                    self.averages[symbol].ma_50.Current.Value and self.averages[symbol].rsi.Current.Value <= 30:
                 stocks.append(symbol)
         for symbol in set(self.averages.keys()):
             if symbol not in stocks:
@@ -54,7 +54,7 @@ class MeanReversionLong(QCAlgorithm):
             else:
                 adx = AverageDirectionalIndex(7)
                 atr = AverageTrueRange(10)
-                for data in self.History(symbol, 100, Resolution.Daily).itertuples():
+                for data in self.History(symbol, 10, Resolution.Daily).itertuples():
                     trade_bar = TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
                     atr.Update(trade_bar)
                     adx.Update(trade_bar)
@@ -76,15 +76,18 @@ class MeanReversionLong(QCAlgorithm):
 class SelectionData():
     def __init__(self, history):
         self.ma = SimpleMovingAverage(150)
+        self.ma_50 = SimpleMovingAverage(50)
         self.rsi = RelativeStrengthIndex(3)
 
         for data in history.itertuples():
             self.ma.Update(data.Index[1], data.close)
+            self.ma_50.Update(data.Index[1], data.close)
             self.rsi.Update(data.Index[1], data.close)
 
     def is_ready(self):
-        return self.ma.IsReady and self.rsi.IsReady
+        return self.ma.IsReady and self.ma_50.IsReady and self.rsi.IsReady
 
     def update(self, time, stock):
         self.ma.Update(time, stock.Price)
+        self.ma_50.Update(time, stock.Price)
         self.rsi.Update(time, stock.Price)
