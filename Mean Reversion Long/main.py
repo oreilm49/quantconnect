@@ -35,14 +35,23 @@ class MeanReversionLong(QCAlgorithm):
                 del self.averages[symbol]
         return stocks
 
+    def position_outdated(self, symbol) -> bool:
+        """
+        Checks if the position is too old, or if it's time isn't stored
+        """
+        if self.ObjectStore.ContainsKey(str(symbol)):
+            return (self.Time - parse(self.ObjectStore.Read(str(symbol)))).days >= 4
+        return True
+
     def OnData(self, slice) -> None:
         for symbol in self.ActiveSecurities.Keys:
             if self.ActiveSecurities[symbol].Invested:
                 if self.Portfolio[symbol].UnrealizedProfitPercent >= 0.03 or \
-                        self.Portfolio[symbol].UnrealizedProfitPercent <= -0.2 or \
-                        (self.Time - parse(self.ObjectStore.Read(str(symbol)))).days >= 4:
+                    self.Portfolio[symbol].UnrealizedProfitPercent <= -0.2 or \
+                        self.position_outdated(symbol):
                     self.Liquidate(symbol)
-                    self.ObjectStore.Delete(str(symbol))
+                    if self.ObjectStore.ContainsKey(str(symbol)):
+                        self.ObjectStore.Delete(str(symbol))
             else:
                 atr = AverageTrueRange(10)
                 for data in self.History(symbol, 100, Resolution.Daily).itertuples():
