@@ -30,6 +30,9 @@ class MeanReversionLong(QCAlgorithm):
                     self.averages[symbol].adx.Current.Value >= 45 and \
                     self.averages[symbol].rsi.Current.Value <= 30:
                 stocks.append(symbol)
+        for symbol in self.averages.keys():
+            if symbol not in stocks:
+                del self.averages[symbol]
         return stocks
 
     def OnData(self, slice) -> None:

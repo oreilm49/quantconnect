@@ -45,6 +45,9 @@ class NewHighBreakout(QCAlgorithm):
             self.averages[symbol].update(self.Time, stock)
             if self.averages[symbol].is_ready() and stock.Price > self.averages[symbol].ma.Current.Value:
                 stocks.append(symbol)
+        for symbol in self.averages.keys():
+            if symbol not in stocks:
+                del self.averages[symbol]
         return stocks
 
     @property
