@@ -54,7 +54,7 @@ class MeanReversionLong(QCAlgorithm):
                         self.ObjectStore.Delete(str(symbol))
             else:
                 atr = AverageTrueRange(10)
-                for data in self.History(symbol, 100, Resolution.Daily).itertuples():
+                for data in self.History(symbol, 10, Resolution.Daily).itertuples():
                     atr.Update(
                         TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
                     )
