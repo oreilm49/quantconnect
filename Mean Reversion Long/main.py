@@ -10,8 +10,8 @@ class MeanReversionLong(QCAlgorithm):
 
     def Initialize(self):
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
-        self.SetStartDate(2012, 1, 1)
-        self.SetEndDate(2022, 1, 1)
+        self.SetStartDate(2018, 1, 1)
+        self.SetEndDate(2019, 1, 1)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.AddUniverse(self.coarse_selection)
@@ -21,7 +21,7 @@ class MeanReversionLong(QCAlgorithm):
 
     def coarse_selection(self, coarse):
         stocks = []
-        for stock in [stock for stock in coarse if stock.DollarVolume > 2500000 and stock.Price > 1]:
+        for stock in [stock for stock in coarse if stock.DollarVolume > 2500000 and stock.Price > 1 and stock.Market == Market.USA and stock.HasFundamentalData]:
             symbol = stock.Symbol
             if symbol not in self.averages:
                 self.averages[symbol] = SelectionData(self.History(symbol, 150, Resolution.Daily))
