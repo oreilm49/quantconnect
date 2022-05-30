@@ -52,6 +52,8 @@ class MeanReversionLong(QCAlgorithm):
                     if self.ObjectStore.ContainsKey(str(symbol)):
                         self.ObjectStore.Delete(str(symbol))
             else:
+                if self.Portfolio.MarginRemaining < self.Portfolio.TotalPortfolioValue / 10:
+                    continue
                 adx = AverageDirectionalIndex(7)
                 atr = AverageTrueRange(10)
                 for data in self.History(symbol, 10, Resolution.Daily).itertuples():
@@ -65,7 +67,7 @@ class MeanReversionLong(QCAlgorithm):
                     continue
                 position_size = self.calculate_position_size(atr.Current.Value)
                 position_value = position_size * self.ActiveSecurities[symbol].Price
-                if position_value < self.Portfolio.Cash:
+                if position_value < self.Portfolio.MarginRemaining:
                     self.MarketOrder(symbol, position_size)
                     self.ObjectStore.Save(str(symbol), str(self.Time))
 
