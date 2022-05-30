@@ -21,7 +21,8 @@ class MeanReversionLong(QCAlgorithm):
 
     def coarse_selection(self, coarse):
         stocks = []
-        for stock in [stock for stock in coarse if stock.DollarVolume > 2500000 and stock.Price > 1 and stock.Market == Market.USA and stock.HasFundamentalData]:
+        coarse = [stock for stock in coarse if stock.DollarVolume > 2500000 and stock.Price > 1 and stock.Market == Market.USA and stock.HasFundamentalData]
+        for stock in sorted(coarse, key=lambda x: x.DollarVolume, reverse=True):
             symbol = stock.Symbol
             if symbol not in self.averages:
                 self.averages[symbol] = SelectionData(self.History(symbol, 150, Resolution.Daily))
