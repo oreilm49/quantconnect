@@ -27,10 +27,9 @@ class MeanReversionLong(QCAlgorithm):
                 self.averages[symbol] = SelectionData(self.History(symbol, 150, Resolution.Daily))
             self.averages[symbol].update(self.Time, stock)
             if self.averages[symbol].is_ready() and stock.Price > self.averages[symbol].ma.Current.Value and \
-                    self.averages[symbol].adx.Current.Value >= 45 and \
-                    self.averages[symbol].rsi.Current.Value <= 30:
+                self.averages[symbol].rsi.Current.Value <= 30:
                 stocks.append(symbol)
-        for symbol in self.averages.keys():
+        for symbol in set(self.averages.keys()):
             if symbol not in stocks:
                 del self.averages[symbol]
         return stocks
@@ -53,11 +52,14 @@ class MeanReversionLong(QCAlgorithm):
                     if self.ObjectStore.ContainsKey(str(symbol)):
                         self.ObjectStore.Delete(str(symbol))
             else:
+                adx = AverageDirectionalIndex(7)
                 atr = AverageTrueRange(10)
-                for data in self.History(symbol, 10, Resolution.Daily).itertuples():
-                    atr.Update(
-                        TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
-                    )
+                for data in self.History(symbol, 100, Resolution.Daily).itertuples():
+                    trade_bar = TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
+                    atr.Update(trade_bar)
+                    adx.Update(trade_bar)
+                if not adx.Current.Value >= 45:
+                    continue
                 natr = 100 * (atr.Current.Value / self.ActiveSecurities[symbol].Price)
                 if natr < 0.04:
                     continue
@@ -73,19 +75,16 @@ class MeanReversionLong(QCAlgorithm):
 
 class SelectionData():
     def __init__(self, history):
-        self.adx = AverageDirectionalIndex(7)
         self.ma = SimpleMovingAverage(150)
         self.rsi = RelativeStrengthIndex(3)
 
         for data in history.itertuples():
-            self.adx.Update(data.Index[1], data.close)
             self.ma.Update(data.Index[1], data.close)
             self.rsi.Update(data.Index[1], data.close)
 
     def is_ready(self):
-        return self.adx.IsReady and self.ma.IsReady and self.rsi.IsReady
+        return self.ma.IsReady and self.rsi.IsReady
 
     def update(self, time, stock):
-        self.adx.Update(time, stock.Price)
         self.ma.Update(time, stock.Price)
         self.rsi.Update(time, stock.Price)
