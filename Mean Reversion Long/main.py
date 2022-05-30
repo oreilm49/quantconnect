@@ -1,4 +1,6 @@
 # region imports
+from datetime import timedelta
+
 from AlgorithmImports import *
 # endregion
 from dateutil.parser import parse
@@ -15,6 +17,7 @@ class MeanReversionLong(QCAlgorithm):
         self.AddUniverse(self.coarse_selection)
         self.averages = {}
         self._changes = None
+        self.EQUITY_RISK_PC = 0.01
 
     def coarse_selection(self, coarse):
         stocks = []
@@ -25,7 +28,6 @@ class MeanReversionLong(QCAlgorithm):
             self.averages[symbol].update(self.Time, stock)
             if self.averages[symbol].is_ready() and stock.Price > self.averages[symbol].ma.Current.Value and \
                     self.averages[symbol].adx.Current.Value >= 45 and \
-                    self.averages[symbol].atr.Current.Value >= 0.04 and \
                     self.averages[symbol].rsi.Current.Value <= 30:
                 stocks.append(symbol)
         return stocks
@@ -39,28 +41,39 @@ class MeanReversionLong(QCAlgorithm):
                     self.Liquidate(symbol)
                     self.ObjectStore.Delete(str(symbol))
             else:
-                position_value = self.Portfolio.TotalPortfolioValue / 10
+                atr = AverageTrueRange(10)
+                for data in self.History(symbol, 100, Resolution.Daily).itertuples():
+                    atr.Update(
+                        TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
+                    )
+                natr = 100 * (atr.Current.Value / self.ActiveSecurities[symbol].Price)
+                if natr < 0.04:
+                    continue
+                position_size = self.calculate_position_size(atr.Current.Value)
+                position_value = position_size * self.ActiveSecurities[symbol].Price
                 if position_value < self.Portfolio.Cash:
-                    self.MarketOrder(symbol, int(position_value / self.ActiveSecurities[symbol].Price))
+                    self.MarketOrder(symbol, position_size)
                     self.ObjectStore.Save(str(symbol), str(self.Time))
+
+    def calculate_position_size(self, atr):
+        return round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / atr)
+
 
 class SelectionData():
     def __init__(self, history):
         self.adx = AverageDirectionalIndex(7)
-        self.atr = NormalizedAverageTrueRange(10)
         self.ma = SimpleMovingAverage(150)
         self.rsi = RelativeStrengthIndex(3)
 
         for data in history.itertuples():
             self.adx.Update(data.Index[1], data.close)
-            self.atr.Update(data.Index[1], data.close)
             self.ma.Update(data.Index[1], data.close)
             self.rsi.Update(data.Index[1], data.close)
 
     def is_ready(self):
-        return self.adx.IsReady and self.atr.IsReady and self.ma.IsReady and self.rsi.IsReady
+        return self.adx.IsReady and self.ma.IsReady and self.rsi.IsReady
 
     def update(self, time, stock):
         self.adx.Update(time, stock.Price)
-        self.atr.Update(time, stock.Price)
         self.ma.Update(time, stock.Price)
+        self.rsi.Update(time, stock.Price)
