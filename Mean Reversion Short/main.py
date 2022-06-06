@@ -86,7 +86,7 @@ class CoarseData():
 
         for data in history.itertuples():
             self.rsi.Update(data.Index[1], data.close)
-            self.close.add(data.close)
+            self.close.Add(data.close)
 
     @property
     def two_days_uptrend(self):
