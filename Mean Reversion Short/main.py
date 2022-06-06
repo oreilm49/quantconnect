@@ -79,16 +79,16 @@ class MeanReversionShort(QCAlgorithm):
 class CoarseData():
     def __init__(self, history):
         self.rsi = RelativeStrengthIndex(3)
-        self.close = pd.Series()
+        self.close = RollingWindow[float](3)
 
         for data in history.itertuples():
             self.rsi.Update(data.Index[1], data.close)
-            self.close[data.Index] = data.close
+            self.close.add(data.close)
 
     @property
     def two_days_uptrend(self):
         try:
-            return self.close.iloc[-1] > self.close.iloc[-2] > self.close.iloc[-3]
+            return self.close[0] > self.close[1] > self.close[2]
         except:
             return False
 
