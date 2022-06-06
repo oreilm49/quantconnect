@@ -29,6 +29,8 @@ class MeanReversionShort(QCAlgorithm):
                 break
             symbol = stock.Symbol
             data = CoarseData(self.History(symbol, 3, Resolution.Daily))
+            # Rule #3: Last two days up
+            # Rule #4: 3 day RSI above 85
             if data.rsi.Current.Value >= 85 and data.two_days_uptrend:
                 stocks.append(symbol)
                 stock_rsi_map[symbol] = data.rsi.Current.Value
@@ -41,10 +43,12 @@ class MeanReversionShort(QCAlgorithm):
         for stock in sorted(fine, key=lambda x: x.MarketCap, reverse=True):
             symbol = stock.Symbol
             self.fine_averages[symbol] = FineSelectionData(self.History(symbol, 10, Resolution.Daily))
+            # Rule #1: ADX of past 7 days above 50
             if not self.fine_averages[symbol].adx.Current.Value > 50:
                 continue
-            natr = 100 * (self.fine_averages[symbol].atr.Current.Value / stock.Price)
-            if natr > 0.05:
+            natr = self.fine_averages[symbol].atr.Current.Value / stock.Price
+            # Rule #2: ATR % of past 10 days above 5%
+            if not natr > 0.05:
                 continue
             stocks.append(symbol)
             if len(stocks) == 10:
