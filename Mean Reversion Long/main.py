@@ -14,25 +14,38 @@ class MeanReversionLong(QCAlgorithm):
         self.SetEndDate(2019, 1, 1)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
-        self.AddUniverse(self.coarse_selection)
-        self.averages = {}
+        self.AddUniverse(self.coarse_selection, self.fine_selection)
+        self.fine_averages = {}
         self._changes = None
         self.EQUITY_RISK_PC = 0.01
 
     def coarse_selection(self, coarse):
         stocks = []
+        count = 0
         coarse = [stock for stock in coarse if stock.DollarVolume > 2500000 and stock.Price > 1 and stock.Market == Market.USA and stock.HasFundamentalData]
         for stock in sorted(coarse, key=lambda x: x.DollarVolume, reverse=True):
+            if count == 500:
+                break
             symbol = stock.Symbol
-            if symbol not in self.averages:
-                self.averages[symbol] = SelectionData(self.History(symbol, 150, Resolution.Daily))
-            self.averages[symbol].update(self.Time, stock)
-            if self.averages[symbol].is_ready() and stock.Price > self.averages[symbol].ma.Current.Value < \
-                    self.averages[symbol].ma_50.Current.Value and self.averages[symbol].rsi.Current.Value <= 30:
+            data = RSIData(self.History(symbol, 3, Resolution.Daily))
+            if data.rsi.Current.Value <= 30:
                 stocks.append(symbol)
-        for symbol in set(self.averages.keys()):
-            if symbol not in stocks:
-                del self.averages[symbol]
+                count += 1
+        return stocks
+
+    def fine_selection(self, fine):
+        stocks = []
+        for stock in sorted(fine, key=lambda x: x.MarketCap, reverse=True):
+            symbol = stock.Symbol
+            self.fine_averages[symbol] = FineSelectionData(self.History(symbol, 10, Resolution.Daily))
+            if not self.fine_averages[symbol].adx.Current.Value >= 45:
+                continue
+            natr = 100 * (self.fine_averages[symbol].atr.Current.Value / stock.Price)
+            if natr < 0.04:
+                continue
+            stocks.append(symbol)
+            if len(stocks) == 10:
+                break
         return stocks
 
     def position_outdated(self, symbol) -> bool:
@@ -53,44 +66,33 @@ class MeanReversionLong(QCAlgorithm):
                     if self.ObjectStore.ContainsKey(str(symbol)):
                         self.ObjectStore.Delete(str(symbol))
             else:
-                if self.Portfolio.MarginRemaining < self.Portfolio.TotalPortfolioValue / 10:
-                    continue
-                adx = AverageDirectionalIndex(7)
-                atr = AverageTrueRange(10)
-                for data in self.History(symbol, 10, Resolution.Daily).itertuples():
-                    trade_bar = TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
-                    atr.Update(trade_bar)
-                    adx.Update(trade_bar)
-                if not adx.Current.Value >= 45:
-                    continue
-                natr = 100 * (atr.Current.Value / self.ActiveSecurities[symbol].Price)
-                if natr < 0.04:
-                    continue
-                position_size = self.calculate_position_size(atr.Current.Value)
-                position_value = position_size * self.ActiveSecurities[symbol].Price
-                if position_value < self.Portfolio.MarginRemaining:
+                position_size, position_value = self.calculate_position(symbol)
+                if self.Portfolio.GetMarginRemaining(symbol, OrderDirection.Buy) > position_value:
                     self.MarketOrder(symbol, position_size)
                     self.ObjectStore.Save(str(symbol), str(self.Time))
 
-    def calculate_position_size(self, atr):
-        return round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / atr)
+    def calculate_position(self, symbol):
+        position_size = round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / self.fine_averages[symbol].atr.Current.Value)
+        return position_size, position_size * self.ActiveSecurities[symbol].Price
 
 
-class SelectionData():
+class RSIData():
     def __init__(self, history):
-        self.ma = SimpleMovingAverage(150)
-        self.ma_50 = SimpleMovingAverage(50)
         self.rsi = RelativeStrengthIndex(3)
 
         for data in history.itertuples():
-            self.ma.Update(data.Index[1], data.close)
-            self.ma_50.Update(data.Index[1], data.close)
             self.rsi.Update(data.Index[1], data.close)
 
-    def is_ready(self):
-        return self.ma.IsReady and self.ma_50.IsReady and self.rsi.IsReady
 
-    def update(self, time, stock):
-        self.ma.Update(time, stock.Price)
-        self.ma_50.Update(time, stock.Price)
-        self.rsi.Update(time, stock.Price)
+class FineSelectionData():
+    def __init__(self, history):
+        self.adx = AverageDirectionalIndex(7)
+        self.atr = AverageTrueRange(10)
+
+        for data in history.itertuples():
+            self.update(data)
+
+    def update(self, data):
+        trade_bar = TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
+        self.adx.Update(trade_bar)
+        self.atr.Update(trade_bar)
