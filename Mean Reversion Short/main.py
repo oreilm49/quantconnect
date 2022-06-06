@@ -21,6 +21,7 @@ class MeanReversionShort(QCAlgorithm):
 
     def coarse_selection(self, coarse):
         stocks = []
+        stock_rsi_map = {}
         count = 0
         coarse = [stock for stock in coarse if stock.DollarVolume > 5000000 and stock.Price > 10 and stock.Market == Market.USA and stock.HasFundamentalData]
         for stock in sorted(coarse, key=lambda x: x.DollarVolume, reverse=True):
@@ -30,8 +31,10 @@ class MeanReversionShort(QCAlgorithm):
             data = CoarseData(self.History(symbol, 3, Resolution.Daily))
             if data.rsi.Current.Value >= 85 and data.two_days_uptrend:
                 stocks.append(symbol)
+                stock_rsi_map[symbol] = data.rsi.Current.Value
                 count += 1
-        return stocks
+        # rank stocks by RSI
+        return sorted(stocks, key=lambda symbol: stock_rsi_map[symbol], reverse=True)
 
     def fine_selection(self, fine):
         stocks = []
