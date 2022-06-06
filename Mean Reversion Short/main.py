@@ -70,7 +70,7 @@ class MeanReversionShort(QCAlgorithm):
                         self.ObjectStore.Delete(str(symbol))
             else:
                 position_size, position_value = self.calculate_position(symbol)
-                if self.Portfolio.GetMarginRemaining(symbol, OrderDirection.Buy) > position_value:
+                if self.Portfolio.GetMarginRemaining(symbol, OrderDirection.Sell) > position_value:
                     self.MarketOrder(symbol, -position_size)
                     self.ObjectStore.Save(str(symbol), str(self.Time))
 
