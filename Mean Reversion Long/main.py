@@ -40,8 +40,8 @@ class MeanReversionLong(QCAlgorithm):
             self.fine_averages[symbol] = FineSelectionData(self.History(symbol, 10, Resolution.Daily))
             if not self.fine_averages[symbol].adx.Current.Value >= 45:
                 continue
-            natr = 100 * (self.fine_averages[symbol].atr.Current.Value / stock.Price)
-            if natr < 0.04:
+            natr = self.fine_averages[symbol].atr.Current.Value / stock.Price
+            if natr < 0.4:
                 continue
             stocks.append(symbol)
             if len(stocks) == 10:
