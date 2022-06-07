@@ -47,7 +47,7 @@ class MeanReversionLong(QCAlgorithm):
             if symbol not in self.fine_averages or self.fine_averages[symbol].is_outdated(self.Time):
                 self.fine_averages[symbol] = FineSelectionData(self.History(symbol, 10, Resolution.Daily), symbol)
             else:
-                self.fine_averages[symbol].update(self.Time, stock)
+                self.fine_averages[symbol].update(self.Time)
             # Rule #2: 7 day ADX above 45 (strong short term trend)
             if not self.fine_averages[symbol].adx.Current.Value > 45:
                 continue
