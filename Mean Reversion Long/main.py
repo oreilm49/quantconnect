@@ -32,7 +32,9 @@ class MeanReversionLong(QCAlgorithm):
                 self.coarse_averages[symbol] = CoarseSelectionData(self.History(symbol, 50, Resolution.Daily))
             else:
                 self.coarse_averages[symbol].update(self.Time, stock)
-            if self.coarse_averages[symbol].rsi.Current.Value <= 30 and stock.Price > self.coarse_averages[symbol].ma.Current.Value:
+            # Rule #1: Stock must be in long term uptrend (above 50 day)
+            # Rule #4: 3 day RSI is below 30
+            if self.coarse_averages[symbol].rsi.Current.Value < 30 and stock.Price > self.coarse_averages[symbol].ma.Current.Value:
                 stocks.append(symbol)
                 count += 1
         return stocks
@@ -46,7 +48,8 @@ class MeanReversionLong(QCAlgorithm):
                 self.fine_averages[symbol] = FineSelectionData(self.History(symbol, 10, Resolution.Daily))
             else:
                 self.fine_averages[symbol].update(self.Time, stock)
-            if not self.fine_averages[symbol].adx.Current.Value >= 45:
+            # Rule #2: 7 day ADX above 45 (strong short term trend)
+            if not self.fine_averages[symbol].adx.Current.Value > 45:
                 continue
             natr = self.fine_averages[symbol].atr.Current.Value / stock.Price
             # Rule #3: ATR% above 4
