@@ -48,7 +48,8 @@ class MeanReversionLong(QCAlgorithm):
             if not self.fine_averages[symbol].adx.Current.Value >= 45:
                 continue
             natr = self.fine_averages[symbol].atr.Current.Value / stock.Price
-            if natr < 0.4:
+            # Rule #3: ATR% above 4
+            if natr < 0.04:
                 continue
             stocks.append(symbol)
             if len(stocks) == 10:
