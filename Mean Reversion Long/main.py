@@ -42,7 +42,7 @@ class MeanReversionLong(QCAlgorithm):
     def fine_selection(self, fine):
         stocks = []
         # Rule #6: Rank by the lowest RSI = most oversold stocks
-        for stock in sorted(fine, key=lambda x: self.coarse_averages[x.symbol].rsi.Current.Value):
+        for stock in sorted(fine, key=lambda x: self.coarse_averages[x.Symbol].rsi.Current.Value):
             symbol = stock.Symbol
             if symbol not in self.fine_averages or self.fine_averages[symbol].is_outdated(self.Time):
                 self.fine_averages[symbol] = FineSelectionData(self.History(symbol, 10, Resolution.Daily))
