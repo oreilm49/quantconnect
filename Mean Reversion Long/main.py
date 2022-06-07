@@ -41,7 +41,10 @@ class MeanReversionLong(QCAlgorithm):
         stocks = []
         for stock in sorted(fine, key=lambda x: x.MarketCap, reverse=True):
             symbol = stock.Symbol
-            self.fine_averages[symbol] = FineSelectionData(self.History(symbol, 10, Resolution.Daily))
+            if symbol not in self.fine_averages or self.fine_averages[symbol].is_outdated(self.Time):
+                self.fine_averages[symbol] = FineSelectionData(self.History(symbol, 10, Resolution.Daily))
+            else:
+                self.fine_averages[symbol].update(self.Time, stock)
             if not self.fine_averages[symbol].adx.Current.Value >= 45:
                 continue
             natr = self.fine_averages[symbol].atr.Current.Value / stock.Price
@@ -109,3 +112,6 @@ class FineSelectionData():
         trade_bar = TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
         self.adx.Update(trade_bar)
         self.atr.Update(trade_bar)
+
+    def is_outdated(self, time):
+        return (time - self.adx.Current.Time).days > 1 or (time - self.atr.Current.Time).days > 1
