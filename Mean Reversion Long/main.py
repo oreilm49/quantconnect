@@ -45,7 +45,7 @@ class MeanReversionLong(QCAlgorithm):
         for stock in sorted(fine, key=lambda x: self.coarse_averages[x.Symbol].rsi.Current.Value):
             symbol = stock.Symbol
             if symbol not in self.fine_averages or self.fine_averages[symbol].is_outdated(self.Time):
-                self.fine_averages[symbol] = FineSelectionData(self.History(symbol, 10, Resolution.Daily))
+                self.fine_averages[symbol] = FineSelectionData(self.History(symbol, 10, Resolution.Daily), symbol)
             else:
                 self.fine_averages[symbol].update(self.Time, stock)
             # Rule #2: 7 day ADX above 45 (strong short term trend)
@@ -106,15 +106,16 @@ class CoarseSelectionData():
 
 
 class FineSelectionData():
-    def __init__(self, history):
+    def __init__(self, history, symbol):
         self.adx = AverageDirectionalIndex(7)
         self.atr = AverageTrueRange(10)
+        self.symbol = symbol
 
         for data in history.itertuples():
             self.update(data)
 
     def update(self, data):
-        trade_bar = TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
+        trade_bar = TradeBar(data.Index[1], self.symbol, data.open, data.high, data.low, data.close, data.volume, timedelta(1))
         self.adx.Update(trade_bar)
         self.atr.Update(trade_bar)
 
