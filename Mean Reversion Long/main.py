@@ -15,6 +15,7 @@ class MeanReversionLong(QCAlgorithm):
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.AddUniverse(self.coarse_selection, self.fine_selection)
+        self.coarse_averages = {}
         self.fine_averages = {}
         self._changes = None
         self.EQUITY_RISK_PC = 0.01
@@ -27,8 +28,11 @@ class MeanReversionLong(QCAlgorithm):
             if count == 500:
                 break
             symbol = stock.Symbol
-            data = RSIData(self.History(symbol, 3, Resolution.Daily))
-            if data.rsi.Current.Value <= 30:
+            if symbol not in self.coarse_averages or self.coarse_averages[symbol].is_outdated(self.Time):
+                self.coarse_averages[symbol] = CoarseSelectionData(self.History(symbol, 50, Resolution.Daily))
+            else:
+                self.coarse_averages[symbol].update(self.Time, stock)
+            if self.coarse_averages[symbol].rsi.Current.Value <= 30 and stock.Price > self.coarse_averages[symbol].ma.Current.Value:
                 stocks.append(symbol)
                 count += 1
         return stocks
@@ -76,12 +80,21 @@ class MeanReversionLong(QCAlgorithm):
         return position_size, position_size * self.ActiveSecurities[symbol].Price
 
 
-class RSIData():
+class CoarseSelectionData():
     def __init__(self, history):
         self.rsi = RelativeStrengthIndex(3)
+        self.ma = SimpleMovingAverage(50)
 
         for data in history.itertuples():
             self.rsi.Update(data.Index[1], data.close)
+            self.ma.Update(data.Index[1], data.close)
+
+    def update(self, time, stock):
+        self.rsi.Update(time, stock.Price)
+        self.ma.Update(time, stock.Price)
+
+    def is_outdated(self, time):
+        return (time - self.ma.Current.Time).days > 1 or (time - self.rsi.Current.Time).days > 1
 
 
 class FineSelectionData():
