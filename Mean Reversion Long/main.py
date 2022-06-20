@@ -5,18 +5,18 @@ from AlgorithmImports import *
 # endregion
 from dateutil.parser import parse
 
+NUM_OF_SYMBOLS = "number_of_symbols"
+
 
 class MeanReversionLong(QCAlgorithm):
-
     def Initialize(self):
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
         self.SetStartDate(2012, 1, 1)
         self.SetEndDate(2022, 1, 1)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
-        self.AddUniverse(self.coarse_selection, self.fine_selection)
+        self.AddUniverse(self.coarse_selection)
         self.coarse_averages = {}
-        self.fine_averages = {}
         self._changes = None
         self.EQUITY_RISK_PC = 0.01
 
@@ -35,30 +35,10 @@ class MeanReversionLong(QCAlgorithm):
             # Rule #1: Stock must be in long term uptrend (above 50 day)
             # Rule #4: 3 day RSI is below 30
             if self.coarse_averages[symbol].rsi.Current.Value < 30 and stock.Price > self.coarse_averages[symbol].ma.Current.Value:
-                stocks.append(symbol)
+                stocks.append(stock)
                 count += 1
-        return stocks
-
-    def fine_selection(self, fine):
-        stocks = []
         # Rule #6: Rank by the lowest RSI = most oversold stocks
-        for stock in sorted(fine, key=lambda x: self.coarse_averages[x.Symbol].rsi.Current.Value):
-            symbol = stock.Symbol
-            if symbol not in self.fine_averages or self.fine_averages[symbol].is_outdated(self.Time):
-                self.fine_averages[symbol] = FineSelectionData(self.History(symbol, 10, Resolution.Daily), symbol)
-            else:
-                self.fine_averages[symbol].update(stock, time=self.Time)
-            # Rule #2: 7 day ADX above 45 (strong short term trend)
-            if not self.fine_averages[symbol].adx.Current.Value > 45:
-                continue
-            natr = self.fine_averages[symbol].atr.Current.Value / stock.Price
-            # Rule #3: ATR% above 4
-            if natr < 0.04:
-                continue
-            stocks.append(symbol)
-            if len(stocks) == 10:
-                break
-        return stocks
+        return [stock.Symbol for stock in sorted(stocks, key=lambda x: self.coarse_averages[x.Symbol].rsi.Current.Value)]
 
     def position_outdated(self, symbol) -> bool:
         """
@@ -77,14 +57,30 @@ class MeanReversionLong(QCAlgorithm):
                     self.Liquidate(symbol)
                     if self.ObjectStore.ContainsKey(str(symbol)):
                         self.ObjectStore.Delete(str(symbol))
+                    if self.ObjectStore.ContainsKey(NUM_OF_SYMBOLS):
+                        self.ObjectStore.Save(NUM_OF_SYMBOLS, str(int(self.ObjectStore.Read(NUM_OF_SYMBOLS)) - 1))
             else:
-                position_size, position_value = self.calculate_position(symbol)
+                if self.ObjectStore.ContainsKey(NUM_OF_SYMBOLS) and int(self.ObjectStore.Read(NUM_OF_SYMBOLS)) >= 10:
+                    continue
+                ohlc_data = OHLCData(self.History(symbol, 10, Resolution.Daily), symbol)
+                # Rule #2: 7 day ADX above 45 (strong short term trend)
+                if not ohlc_data.adx.Current.Value > 45:
+                    continue
+                natr = ohlc_data.atr.Current.Value / self.ActiveSecurities[symbol].Price
+                # Rule #3: ATR% above 4
+                if natr < 0.04:
+                    continue
+                position_size, position_value = self.calculate_position(symbol, ohlc_data.atr.Current.Value)
                 if self.Portfolio.GetMarginRemaining(symbol, OrderDirection.Buy) > position_value:
                     self.MarketOrder(symbol, position_size)
                     self.ObjectStore.Save(str(symbol), str(self.Time))
+                    if self.ObjectStore.ContainsKey(NUM_OF_SYMBOLS):
+                        self.ObjectStore.Save(NUM_OF_SYMBOLS, str(int(self.ObjectStore.Read(NUM_OF_SYMBOLS)) + 1))
+                    else:
+                        self.ObjectStore.Save(NUM_OF_SYMBOLS, "1")
 
-    def calculate_position(self, symbol):
-        position_size = round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / self.fine_averages[symbol].atr.Current.Value)
+    def calculate_position(self, symbol, atr):
+        position_size = round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / atr)
         return position_size, position_size * self.ActiveSecurities[symbol].Price
 
 
@@ -105,7 +101,7 @@ class CoarseSelectionData():
         return (time - self.ma.Current.Time).days > 1 or (time - self.rsi.Current.Time).days > 1
 
 
-class FineSelectionData():
+class OHLCData():
     def __init__(self, history, symbol):
         self.adx = AverageDirectionalIndex(7)
         self.atr = AverageTrueRange(10)
@@ -118,6 +114,3 @@ class FineSelectionData():
         trade_bar = TradeBar(time or data.Index[1], self.symbol, data.open, data.high, data.low, data.close, data.volume, timedelta(1))
         self.adx.Update(trade_bar)
         self.atr.Update(trade_bar)
-
-    def is_outdated(self, time):
-        return (time - self.adx.Current.Time).days > 1 or (time - self.atr.Current.Time).days > 1
