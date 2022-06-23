@@ -9,8 +9,8 @@ NUM_OF_SYMBOLS = "number_of_symbols"
 class MeanReversionBBLong(QCAlgorithm):
     def Initialize(self):
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
-        self.SetStartDate(2012, 1, 1)
-        self.SetEndDate(2012, 2, 1)
+        self.SetStartDate(1995, 1, 1)
+        self.SetEndDate(2022, 1, 1)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.AddUniverse(self.coarse_selection)
