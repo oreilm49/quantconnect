@@ -22,13 +22,12 @@ class MeanReversionBBLong(QCAlgorithm):
             [stock for stock in coarse if stock.DollarVolume > 2500000 and stock.Price > 1 and stock.Market == Market.USA and stock.HasFundamentalData],
             key=lambda x: x.DollarVolume, reverse=True
         )[:500]
-        price_data = self.History([stock.Symbol for stock in coarse], 50, Resolution.Daily)
         for stock in coarse:
             symbol = stock.Symbol
             if symbol not in self.symbol_data:
-                self.symbol_data[symbol] = SymbolData(price_data.loc[symbol])
+                self.symbol_data[symbol] = SymbolData(self.History(stock.Symbol, 50, Resolution.Daily))
             else:
-                self.symbol_data[symbol].update(self.Time, stock)
+                self.symbol_data[symbol].update(self.Time, stock.Price)
             # Rule #1: Stock must be in long term uptrend (above 50 day)
             # Rule #2: 3 day RSI is below 30
             if not (self.symbol_data[symbol].rsi.Current.Value < 30 and stock.Price > self.symbol_data[symbol].ma.Current.Value):
