@@ -84,11 +84,9 @@ class SymbolData:
         self.bb = BollingerBands(21, 2)
 
         for data in history.itertuples():
-            self.rsi.Update(data.Index, data.close)
-            self.ma.Update(data.Index, data.close)
-            self.bb.Update(data.Index, data.close)
+            self.update(data.Index[1], data.close)
 
     def update(self, time, price):
-            self.rsi.Update(time, price)
-            self.ma.Update(time, price)
-            self.bb.Update(time, price)
+        self.rsi.Update(time, price)
+        self.ma.Update(time, price)
+        self.bb.Update(time, price)
