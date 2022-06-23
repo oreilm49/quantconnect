@@ -58,21 +58,13 @@ class MeanReversionBBLong(QCAlgorithm):
                     self.Liquidate(symbol)
                     if self.ObjectStore.ContainsKey(str(symbol)):
                         self.ObjectStore.Delete(str(symbol))
-                    if self.ObjectStore.ContainsKey(NUM_OF_SYMBOLS):
-                        self.ObjectStore.Save(NUM_OF_SYMBOLS, str(int(self.ObjectStore.Read(NUM_OF_SYMBOLS)) - 1))
             else:
-                if self.ObjectStore.ContainsKey(NUM_OF_SYMBOLS) and int(self.ObjectStore.Read(NUM_OF_SYMBOLS)) >= 10:
-                    continue
                 if self.ActiveSecurities[symbol].Price == 0:
                     continue
                 position_size, position_value = self.calculate_position(symbol)
                 if self.Portfolio.GetMarginRemaining(symbol, OrderDirection.Buy) > position_value:
                     self.MarketOrder(symbol, position_size)
                     self.ObjectStore.Save(str(symbol), str(self.Time))
-                    if self.ObjectStore.ContainsKey(NUM_OF_SYMBOLS):
-                        self.ObjectStore.Save(NUM_OF_SYMBOLS, str(int(self.ObjectStore.Read(NUM_OF_SYMBOLS)) + 1))
-                    else:
-                        self.ObjectStore.Save(NUM_OF_SYMBOLS, "1")
 
     def calculate_position(self, symbol):
         position_value = self.Portfolio.TotalPortfolioValue / 10
