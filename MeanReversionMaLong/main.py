@@ -7,8 +7,8 @@ from dateutil.parser import parse
 class MeanReversionMaLong(QCAlgorithm):
     def Initialize(self):
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
-        self.SetStartDate(2018, 1, 1)
-        self.SetEndDate(2019, 1, 1)
+        self.SetStartDate(2012, 1, 1)
+        self.SetEndDate(2022, 1, 1)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.AddUniverse(self.coarse_selection)
