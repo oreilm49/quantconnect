@@ -84,4 +84,5 @@ class SymbolData:
     def update(self, time, price):
         self.rsi.Update(time, price)
         self.ma.Update(time, price)
+        self.ma_long.Update(time, price)
         self.bb.Update(time, price)
