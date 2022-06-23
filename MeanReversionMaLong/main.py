@@ -24,12 +24,12 @@ class MeanReversionMaLong(QCAlgorithm):
         for stock in coarse:
             symbol = stock.Symbol
             if symbol not in self.symbol_data:
-                self.symbol_data[symbol] = SymbolData(self.History(stock.Symbol, 150, Resolution.Daily))
+                self.symbol_data[symbol] = SymbolData(self.History(stock.Symbol, 200, Resolution.Daily))
             else:
                 self.symbol_data[symbol].update(self.Time, stock.Price)
-            # Rule #1: Stock must be in long term uptrend (above 50 day, above 150 day)
-            if not (stock.Price > self.symbol_data[symbol].ma.Current.Value > self.symbol_data[
-                symbol].ma_long.Current.Value):
+            # Rule #1: Trend template
+            if not (stock.Price > self.symbol_data[symbol].ma.Current.Value >
+                    self.symbol_data[symbol].ma_long.Current.Value > self.symbol_data[symbol].ma_200.Current.Value):
                 continue
             ema = self.symbol_data[symbol].ema.Current.Value
             # Rule #2: 21 EMA must be above the 50 day
@@ -77,6 +77,7 @@ class SymbolData:
         self.ema = SimpleMovingAverage(21)
         self.ma = SimpleMovingAverage(50)
         self.ma_long = SimpleMovingAverage(150)
+        self.ma_200 = SimpleMovingAverage(200)
         self.roc = RateOfChange(300)
 
         for data in history.itertuples():
@@ -86,4 +87,5 @@ class SymbolData:
         self.ema.Update(time, price)
         self.ma.Update(time, price)
         self.ma_long.Update(time, price)
+        self.ma_200.Update(time, price)
         self.roc.Update(time, price)
