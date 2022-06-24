@@ -35,7 +35,10 @@ class MeanReversionMaLong(QCAlgorithm):
             # Rule #2: 21 EMA must be above the 50 day
             if not ema > self.symbol_data[symbol].ma.Current.Value:
                 continue
-            # Rule #3: Price at or within 2% below EMA.
+            # Rule #3: 7 EMA must be increasing
+            if not self.symbol_data[symbol].strong_short_term_trend:
+                continue
+            # Rule #4: Price at or within 2% below EMA.
             if not ema >= stock.Price >= ema * 0.98:
                 continue
             stocks.append(stock)
@@ -74,7 +77,9 @@ class MeanReversionMaLong(QCAlgorithm):
 
 class SymbolData:
     def __init__(self, history):
-        self.ema = SimpleMovingAverage(21)
+        self.ema = ExponentialMovingAverage(21)
+        self.ema_short = ExponentialMovingAverage(7)
+        self.ema_short_window = RollingWindow[float](3)
         self.ma = SimpleMovingAverage(50)
         self.ma_long = SimpleMovingAverage(150)
         self.ma_200 = SimpleMovingAverage(200)
@@ -85,7 +90,13 @@ class SymbolData:
 
     def update(self, time, price):
         self.ema.Update(time, price)
+        self.ema_short.Update(time, price)
+        self.ema_short_window.Add(self.ema_short.Current.Value)
         self.ma.Update(time, price)
         self.ma_long.Update(time, price)
         self.ma_200.Update(time, price)
         self.roc.Update(time, price)
+
+    @property
+    def strong_short_term_trend(self):
+        return self.ema_short.Current.Value > self.ema_short_window[2]
