@@ -3,7 +3,6 @@ from datetime import timedelta
 
 from AlgorithmImports import *
 # endregion
-from dateutil.parser import parse
 
 
 class MeanReversionLong(QCAlgorithm):
@@ -17,6 +16,7 @@ class MeanReversionLong(QCAlgorithm):
         self.symbol_data = {}
         self.EQUITY_RISK_PC = 0.01
         self.STOP_LOSS_PC = 0.08
+        self.open_positions = {}
 
     def coarse_selection(self, coarse):
         stocks = []
@@ -49,8 +49,8 @@ class MeanReversionLong(QCAlgorithm):
         """
         Checks if the position is too old, or if it's time isn't stored
         """
-        if self.ObjectStore.ContainsKey(str(symbol)):
-            return (self.Time - parse(self.ObjectStore.Read(str(symbol)))).days >= 4
+        if self.open_positions.get(symbol):
+            return (self.Time - self.open_positions.get(symbol)).days >= 4
         return True
 
     def OnData(self, slice) -> None:
@@ -60,13 +60,13 @@ class MeanReversionLong(QCAlgorithm):
                     self.Portfolio[symbol].UnrealizedProfitPercent <= self.STOP_LOSS_PC * -1 or \
                         self.position_outdated(symbol):
                     self.Liquidate(symbol)
-                    if self.ObjectStore.ContainsKey(str(symbol)):
-                        self.ObjectStore.Delete(str(symbol))
+                    if self.open_positions.get(symbol):
+                        del self.open_positions[symbol]
             else:
                 position_size, position_value = self.calculate_position(symbol)
                 if position_size > 0 and self.Portfolio.GetMarginRemaining(symbol, OrderDirection.Buy) > position_value:
                     self.MarketOrder(symbol, position_size)
-                    self.ObjectStore.Save(str(symbol), str(self.Time))
+                    self.open_positions[symbol] = self.Time
 
     def calculate_position(self, symbol):
         risk = self.ActiveSecurities[symbol].Price * self.STOP_LOSS_PC
