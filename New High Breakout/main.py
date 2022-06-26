@@ -90,14 +90,12 @@ class NewHighBreakout(QCAlgorithm):
                             self.MarketOrder(symbol, position_size)
                             self.ObjectStore.Save(str(symbol), str(self.Time))
 
-    def calculate_position_size(self, atr):
-        return round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / atr)
-
-    def Liquidate(self, symbol=None, tag: str = "Liquidated"):
-        if self.ObjectStore.ContainsKey(str(symbol)):
-            self.ObjectStore.Delete(str(symbol))
-        liquidated = super().Liquidate(symbol, tag)
-        return liquidated
+    def calculate_position(self, symbol):
+        risk = self.ActiveSecurities[symbol].Price * self.STOP_LOSS_PC
+        if risk <= 0:
+            return 0, 0
+        size = int((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / risk)
+        return size, size * self.ActiveSecurities[symbol].Price
 
 
 class SelectionData():
