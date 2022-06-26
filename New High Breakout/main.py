@@ -55,8 +55,8 @@ class NewHighBreakout(QCAlgorithm):
         """
         Checks if the position is too old, or if it's time isn't stored
         """
-        if self.ObjectStore.ContainsKey(str(symbol)):
-            return (self.Time - parse(self.ObjectStore.Read(str(symbol)))).days >= 120
+        if self.open_positions.get(symbol):
+            return (self.Time - self.open_positions.get(symbol)).days >= 120
         return True
 
     def OnData(self, slice) -> None:
