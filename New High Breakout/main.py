@@ -106,7 +106,7 @@ class NewHighBreakout(QCAlgorithm):
 
 class SelectionData():
     def __init__(self, history):
-        self.roc = RateOfChangePercent(50)
+        self.roc = RateOfChangePercent(200)
         self.ma = SimpleMovingAverage(50)
         self.ma_long = SimpleMovingAverage(150)
         self.ma_200 = SimpleMovingAverage(200)
