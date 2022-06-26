@@ -75,8 +75,6 @@ class NewHighBreakout(QCAlgorithm):
         return True
 
     def OnData(self, slice) -> None:
-        if self.IsWarmingUp:
-            return
         if self.spy_downtrending:
             for security in self.Portfolio.Securities.keys():
                 self.Liquidate(self.Portfolio.Securities[security].Symbol)
