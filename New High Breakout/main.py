@@ -12,7 +12,6 @@ class NewHighBreakout(QCAlgorithm):
         self.SetStartDate(2012, 1, 1)
         self.SetEndDate(2022, 1, 1)
         self.SetCash(10000)
-        self.SetWarmUp(200, Resolution.Daily)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.spy = self.AddEquity("SPY", Resolution.Daily)
         self.AddUniverse(self.coarse_selection)
