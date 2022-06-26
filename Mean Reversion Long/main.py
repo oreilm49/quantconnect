@@ -21,7 +21,7 @@ class MeanReversionLong(QCAlgorithm):
     def coarse_selection(self, coarse):
         stocks = []
         coarse = sorted(
-            [stock for stock in coarse if stock.DollarVolume > 2500000 and stock.Price > 1 and stock.Market == Market.USA and stock.HasFundamentalData],
+            [stock for stock in coarse if stock.DollarVolume > 2500000 and stock.Price > 10 and stock.Market == Market.USA and stock.HasFundamentalData],
             key=lambda x: x.DollarVolume, reverse=True
         )[:500]
         for stock in coarse:
