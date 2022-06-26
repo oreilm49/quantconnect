@@ -129,8 +129,5 @@ class SPYSelectionData():
         for data in history.itertuples():
             self.ma.Update(data.Index[1], data.close)
 
-    def is_ready(self):
-        return self.ma.IsReady
-
     def update(self, time, price):
         self.ma.Update(time, price)
