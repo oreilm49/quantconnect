@@ -31,21 +31,33 @@ class NewHighBreakout(QCAlgorithm):
     def coarse_selection(self, coarse):
         self.update_spy()
         stocks = []
-        stock: CoarseFundamental
         coarse = [stock for stock in coarse if stock.Price > 10 and stock.Market == Market.USA and stock.HasFundamentalData]
         for stock in sorted(coarse, key=lambda x: x.DollarVolume, reverse=True)[:100]:
             symbol = stock.Symbol
             if symbol == self.spy.Symbol:
                 continue
             if symbol not in self.averages:
-                self.averages[symbol] = SelectionData(self.History(symbol, 50, Resolution.Daily))
-            self.averages[symbol].update(self.Time, stock)
-            if self.averages[symbol].is_ready() and stock.Price > self.averages[symbol].ma.Current.Value:
-                stocks.append(symbol)
-        for symbol in self.averages.keys():
-            if symbol not in stocks:
-                del self.averages[symbol]
-        return stocks
+                self.averages[symbol] = SelectionData(self.History(symbol, 200, Resolution.Daily))
+            else:
+                days_outdated = self.averages[symbol].days_outdated(self.Time)
+                if days_outdated:
+                    self.averages[symbol].update_from_history(self.History(symbol, days_outdated - 1, Resolution.Daily))
+                else:
+                    self.averages[symbol].update(self.Time, stock.Price)
+            # Rule #1: Trend template
+            if not (stock.Price > self.averages[symbol].ma.Current.Value >
+                    self.averages[symbol].ma_long.Current.Value > self.averages[symbol].ma_200.Current.Value):
+                continue
+            # Rule #2: Close must be above most recent high
+            if not (stock.Price > self.averages[symbol].high.Current.Value):
+                continue
+            # Rule #3: High must be 5 weeks old (base breakout)
+            if not self.averages[symbol].high.PeriodsSinceMaximum >= 25:
+                continue
+            stocks.append(stock)
+        # Rule #3: Rank by the highest ROC
+        symbols = [stock.Symbol for stock in sorted(stocks, key=lambda x: self.averages[x.Symbol].roc.Current.Value, reverse=True)]
+        return symbols
 
     @property
     def spy_downtrending(self) -> bool:
