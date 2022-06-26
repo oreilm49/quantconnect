@@ -41,7 +41,7 @@ class MeanReversionLong(QCAlgorithm):
             if self.symbol_data[symbol].rsi.Current.Value > 30:
                 continue
             stocks.append(stock)
-        # Rule #3: Rank by the lowest RSI = most oversold stocks
+        # Rule #3: Rank by the highest ROC
         symbols = [stock.Symbol for stock in sorted(stocks, key=lambda x: self.symbol_data[x.Symbol].roc.Current.Value, reverse=True)]
         return symbols
 
