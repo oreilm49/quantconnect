@@ -57,7 +57,7 @@ def analyze_orders() -> None:
     for filename in files:
         name, ending = filename.split(".")
         if ending == 'csv' and '_analyzed' not in name:
-            orders = pd.read_csv(Path(folder_path, filename))
+            orders = pd.read_csv(Path(folder_path, filename), on_bad_lines='skip')
             orders['Time'] = pd.to_datetime(orders['Time'])
             open_positions: dict[str, Position] = {}
             closed_positions: list[Position] = []
