@@ -90,7 +90,7 @@ class NewHighBreakout(QCAlgorithm):
                     self.Liquidate(symbol)
                     if self.open_positions.get(symbol):
                         del self.open_positions[symbol]
-            else:
+            elif slice[symbol].Close > slice[symbol].Open:
                 position_size, position_value = self.calculate_position(symbol)
                 if position_size > 0 and self.Portfolio.GetMarginRemaining(symbol, OrderDirection.Buy) > position_value:
                     self.MarketOrder(symbol, position_size)
