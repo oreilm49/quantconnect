@@ -102,19 +102,32 @@ class NewHighBreakout(QCAlgorithm):
 
 class SelectionData():
     def __init__(self, history):
-        self.roc = RateOfChange(50)
+        self.roc = RateOfChangePercent(50)
         self.ma = SimpleMovingAverage(50)
+        self.ma_long = SimpleMovingAverage(150)
+        self.ma_200 = SimpleMovingAverage(200)
+        self.high = Maximum(100)
+        self.update_from_history(history)
+        self.time = None
 
+    def update(self, time, price):
+        self.roc.Update(time, price)
+        self.ma.Update(time, price)
+        self.ma_long.Update(time, price)
+        self.ma_200.Update(time, price)
+        self.high.Update(time, price)
+        self.time = time
+
+    def update_from_history(self, history):
         for data in history.itertuples():
-            self.roc.Update(data.Index[1], data.close)
-            self.ma.Update(data.Index[1], data.close)
+            self.update(data.Index[1], data.close)
 
-    def is_ready(self):
-        return self.roc.IsReady and self.ma.IsReady
-
-    def update(self, time, stock):
-        self.roc.Update(time, stock.Price)
-        self.ma.Update(time, stock.Price)
+    def days_outdated(self, time):
+        if not self.time:
+            return
+        days = (time - self.time).days
+        if days > 1:
+            return days
 
 
 class SPYSelectionData():
