@@ -19,6 +19,8 @@ class NewHighBreakout(QCAlgorithm):
         self.averages = {}
         self._changes = None
         self.EQUITY_RISK_PC = 0.01
+        self.STOP_LOSS_PC = 0.08
+        self.open_positions = {}
 
     def update_spy(self):
         if self.spy.Symbol not in self.averages:
@@ -69,26 +71,17 @@ class NewHighBreakout(QCAlgorithm):
                 continue
             if self.ActiveSecurities[symbol].Invested:
                 if self.Portfolio[symbol].UnrealizedProfitPercent >= 0.20 or \
-                    self.Portfolio[symbol].UnrealizedProfitPercent <= -0.08 or \
+                    self.Portfolio[symbol].UnrealizedProfitPercent <= self.STOP_LOSS_PC * -1 or \
                         self.ActiveSecurities[symbol].Close < self.averages[symbol].ma.Current.Value or \
                             self.position_outdated(symbol):
                     self.Liquidate(symbol)
+                    if self.open_positions.get(symbol):
+                        del self.open_positions[symbol]
             else:
-                high = Maximum(100)
-                atr = AverageTrueRange(21)
-                for data in self.History(symbol, 100, Resolution.Daily).itertuples():
-                    if self.Time != data.Index[1]:
-                        high.Update(data.Index[1], data.high)
-                    atr.Update(
-                        TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
-                    )
-                if self.ActiveSecurities[symbol].Close >= high.Current.Value:
-                    if high.PeriodsSinceMaximum >= 25:
-                        position_size = self.calculate_position_size(atr.Current.Value)
-                        position_value = position_size * self.ActiveSecurities[symbol].Price
-                        if position_value < self.Portfolio.Cash:
-                            self.MarketOrder(symbol, position_size)
-                            self.ObjectStore.Save(str(symbol), str(self.Time))
+                position_size, position_value = self.calculate_position(symbol)
+                if position_size > 0 and self.Portfolio.GetMarginRemaining(symbol, OrderDirection.Buy) > position_value:
+                    self.MarketOrder(symbol, position_size)
+                    self.open_positions[symbol] = self.Time
 
     def calculate_position(self, symbol):
         risk = self.ActiveSecurities[symbol].Price * self.STOP_LOSS_PC
