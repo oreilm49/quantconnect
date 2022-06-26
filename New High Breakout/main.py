@@ -138,7 +138,7 @@ class SelectionData():
 
 class SPYSelectionData():
     def __init__(self, history):
-        self.ma = SimpleMovingAverage(200)
+        self.ma = SimpleMovingAverage(50)
 
         for data in history.itertuples():
             self.ma.Update(data.Index[1], data.close)
