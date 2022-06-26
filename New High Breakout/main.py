@@ -43,6 +43,7 @@ class NewHighBreakout(QCAlgorithm):
                     self.averages[symbol].update_from_history(self.History(symbol, days_outdated - 1, Resolution.Daily))
                 else:
                     self.averages[symbol].update(self.Time, stock.Price)
+                    self.averages[symbol].vol_ma.Update(self.Time, stock.Volume)
             # Rule #1: Trend template
             if not (stock.Price > self.averages[symbol].ma.Current.Value >
                     self.averages[symbol].ma_long.Current.Value > self.averages[symbol].ma_200.Current.Value):
@@ -50,11 +51,14 @@ class NewHighBreakout(QCAlgorithm):
             # Rule #2: Close must be above most recent high
             if not (stock.Price > self.averages[symbol].high.Current.Value):
                 continue
-            # Rule #3: High must be 5 weeks old (base breakout)
-            if not self.averages[symbol].high.PeriodsSinceMaximum >= 25:
+            # Rule #3: High must be 7 weeks old (base breakout)
+            if not self.averages[symbol].high.PeriodsSinceMaximum >= 35:
+                continue
+            # Rule #4: Breakout must be on high volume
+            if not (stock.Volume / self.averages[symbol].vol_ma.Current.Value) >= 1.5:
                 continue
             stocks.append(stock)
-        # Rule #3: Rank by the highest ROC
+        # Rule #5: Rank by the highest ROC
         symbols = [stock.Symbol for stock in sorted(stocks, key=lambda x: self.averages[x.Symbol].roc.Current.Value, reverse=True)]
         return symbols
 
@@ -108,7 +112,8 @@ class SelectionData():
         self.ma = SimpleMovingAverage(50)
         self.ma_long = SimpleMovingAverage(150)
         self.ma_200 = SimpleMovingAverage(200)
-        self.high = Maximum(100)
+        self.high = Maximum(200)
+        self.vol_ma = SimpleMovingAverage(50)
         self.update_from_history(history)
         self.time = None
 
@@ -123,6 +128,7 @@ class SelectionData():
     def update_from_history(self, history):
         for data in history.itertuples():
             self.update(data.Index[1], data.close)
+            self.vol_ma.Update(data.Index[1], data.volume)
 
     def days_outdated(self, time):
         if not self.time:
