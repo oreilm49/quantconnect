@@ -46,8 +46,9 @@ class NewHighBreakout(QCAlgorithm):
             if not (stock.Price > self.averages[symbol].ma.Current.Value >
                     self.averages[symbol].ma_long.Current.Value > self.averages[symbol].ma_200.Current.Value):
                 continue
-            # Rule #2: Close must be above most recent high
-            if not (stock.Price > self.averages[symbol].high.Current.Value):
+            # Rule #2: Close must be above most recent high, but not extended.
+            high = self.averages[symbol].high.Current.Value
+            if not (high * (1 + self.STOP_LOSS_PC) > stock.Price > high):
                 continue
             # Rule #3: High must be 7 weeks old (base breakout)
             if not self.averages[symbol].high.PeriodsSinceMaximum >= 35:
