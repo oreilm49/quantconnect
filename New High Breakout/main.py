@@ -3,11 +3,6 @@ from datetime import timedelta
 
 from AlgorithmImports import *
 #endregion
-from QuantConnect import Resolution
-from QuantConnect.Algorithm import QCAlgorithm
-from QuantConnect.Brokerages import BrokerageName
-from QuantConnect.Indicators import SimpleMovingAverage, RateOfChange, Maximum
-from dateutil.parser import parse
 
 
 class NewHighBreakout(QCAlgorithm):
