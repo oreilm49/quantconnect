@@ -14,6 +14,7 @@ class NewHighBreakout(QCAlgorithm):
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.spy = self.AddEquity("SPY", Resolution.Daily)
+        self.SetBenchmark("SPY")
         self.AddUniverse(self.coarse_selection)
         self.averages = {}
         self._changes = None
