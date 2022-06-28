@@ -22,9 +22,9 @@ class NewHighBreakout(QCAlgorithm):
 
     def update_spy(self):
         if self.spy.Symbol not in self.averages:
-            history = self.History(self.spy.Symbol, 50, Resolution.Daily)
-            self.averages[self.spy.Symbol] = SPYSelectionData(history)
-        self.averages[self.spy.Symbol].update(self.Time, self.spy.Price)
+            self.averages[self.spy.Symbol] = SPYSelectionData(self.History(self.spy.Symbol, 200, Resolution.Daily))
+        else:
+            self.averages[self.spy.Symbol].update(self.Time, self.spy.Price)
 
     def coarse_selection(self, coarse):
         self.update_spy()
@@ -36,9 +36,10 @@ class NewHighBreakout(QCAlgorithm):
                 continue
             if symbol not in self.averages:
                 self.averages[symbol] = SelectionData(self.History(symbol, 50, Resolution.Daily))
-            self.averages[symbol].update(self.Time, stock)
-            if self.averages[symbol].is_ready() and stock.Price > self.averages[symbol].ma.Current.Value:
-                stocks.append(symbol)
+            self.averages[symbol].update(self.Time, stock.Price)
+            if not (stock.Price > self.averages[symbol].ma.Current.Value):
+                continue
+            stocks.append(symbol)
         return stocks
 
     @property
