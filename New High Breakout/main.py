@@ -12,7 +12,6 @@ class NewHighBreakout(QCAlgorithm):
         self.SetStartDate(2012, 1, 1)
         self.SetEndDate(2022, 1, 1)
         self.SetCash(10000)
-        self.SetWarmUp(200, Resolution.Daily)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.spy = self.AddEquity("SPY", Resolution.Daily)
         self.AddUniverse(self.coarse_selection)
@@ -30,7 +29,6 @@ class NewHighBreakout(QCAlgorithm):
     def coarse_selection(self, coarse):
         self.update_spy()
         stocks = []
-        stock: CoarseFundamental
         coarse = [stock for stock in coarse if stock.Price > 10 and stock.Market == Market.USA and stock.HasFundamentalData]
         for stock in sorted(coarse, key=lambda x: x.DollarVolume, reverse=True)[:100]:
             symbol = stock.Symbol
@@ -56,8 +54,6 @@ class NewHighBreakout(QCAlgorithm):
         return True
 
     def OnData(self, slice) -> None:
-        if self.IsWarmingUp:
-            return
         if self.spy_downtrending:
             for security in self.Portfolio.Securities.keys():
                 self.Liquidate(self.Portfolio.Securities[security].Symbol)
