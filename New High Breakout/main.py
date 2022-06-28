@@ -77,7 +77,7 @@ class NewHighBreakout(QCAlgorithm):
                     atr.Update(
                         TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
                     )
-                if self.ActiveSecurities[symbol].Close >= high.Current.Value:
+                if high.Current.Value * 1.05 > self.ActiveSecurities[symbol].Close >= high.Current.Value:
                     if high.PeriodsSinceMaximum >= 25:
                         position_size = self.calculate_position_size(atr.Current.Value)
                         position_value = position_size * self.ActiveSecurities[symbol].Price
