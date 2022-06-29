@@ -32,10 +32,8 @@ class RocRotation(QCAlgorithm):
             if symbol not in self.averages:
                 self.averages[symbol] = SelectionData(self.History(symbol, 200, Resolution.Daily))
             self.averages[symbol].update(self.Time, stock.Price)
-            if stock.Price > self.averages[symbol].ma_50.Current.Value:
-                stocks.append(stock)
-        stocks = sorted(stocks, key=lambda stock: self.averages[stock.Symbol].roc, reverse=True)[:10]
-        return [stock.Symbol for stock in stocks]
+            stocks.append(symbol)
+        return sorted(stocks, key=lambda symbol: self.averages[symbol].roc, reverse=True)[:10]
 
     @property
     def spy_downtrending(self) -> bool:
@@ -53,11 +51,17 @@ class RocRotation(QCAlgorithm):
             if security.Invested:
                 self.Liquidate(security.Symbol)
         for symbol in self.ActiveSecurities.Keys:
-            if symbol != self.spy.Symbol and not self.ActiveSecurities[symbol].Invested and \
-                    self.averages[symbol].is_ready() and self.averages[symbol].rsi.Current.Value < 50:
-                position_value = self.Portfolio.TotalPortfolioValue / 10
-                if position_value < self.Portfolio.Cash:
-                    self.MarketOrder(symbol, int(position_value / self.ActiveSecurities[symbol].Price))
+            if symbol == self.spy.Symbol:
+                continue
+            if self.ActiveSecurities[symbol].Invested:
+                continue
+            if not self.ActiveSecurities[symbol].Price > self.averages[symbol].ma.Current.Value:
+                continue
+            if not self.averages[symbol].rsi.Current.Value < 50:
+                continue
+            position_value = self.Portfolio.TotalPortfolioValue / 10
+            if position_value < self.Portfolio.Cash:
+                self.MarketOrder(symbol, int(position_value / self.ActiveSecurities[symbol].Price))
         self._changes = None
 
     def OnSecuritiesChanged(self, changes):
