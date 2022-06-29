@@ -1,10 +1,6 @@
 #region imports
 from AlgorithmImports import *
 #endregion
-from QuantConnect import Resolution, AccountType
-from QuantConnect.Algorithm import QCAlgorithm
-from QuantConnect.Brokerages import BrokerageName
-from QuantConnect.Indicators import RelativeStrengthIndex, RateOfChange, SimpleMovingAverage
 
 
 class RocRotation(QCAlgorithm):
