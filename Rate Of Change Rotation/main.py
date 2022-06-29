@@ -45,6 +45,8 @@ class RocRotation(QCAlgorithm):
             for security in self.Portfolio.Securities.keys():
                 self.Liquidate(self.Portfolio.Securities[security].Symbol)
             return
+        if not self.is_tuesday():
+            return
         # if we have no changes, do nothing
         if self._changes is None: return
         # liquidate removed securities
@@ -67,6 +69,9 @@ class RocRotation(QCAlgorithm):
 
     def OnSecuritiesChanged(self, changes):
         self._changes = changes
+
+    def is_tuesday(self):
+        return self.Time.weekday() == 1
 
 
 class SelectionData():
