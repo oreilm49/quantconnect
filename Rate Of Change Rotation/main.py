@@ -37,7 +37,7 @@ class RocRotation(QCAlgorithm):
 
     @property
     def spy_downtrending(self) -> bool:
-        return self.averages[self.spy.Symbol].ma_50.Current.Value > self.spy.Price
+        return self.averages[self.spy.Symbol].ma.Current.Value * .98 > self.spy.Price
 
     def OnData(self, data):
         if self.spy_downtrending:
