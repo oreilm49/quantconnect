@@ -18,7 +18,7 @@ class RocRotation(QCAlgorithm):
 
     def update_spy(self):
         if self.spy.Symbol not in self.averages:
-            history = self.History(self.spy.Symbol, 50, Resolution.Daily)
+            history = self.History(self.spy.Symbol, 200, Resolution.Daily)
             self.averages[self.spy.Symbol] = SPYSelectionData(history)
         self.averages[self.spy.Symbol].update(self.Time, self.spy.Price)
 
@@ -30,7 +30,7 @@ class RocRotation(QCAlgorithm):
             if symbol == self.spy.Symbol:
                 continue
             if symbol not in self.averages:
-                self.averages[symbol] = SelectionData(self.History(symbol, 50, Resolution.Daily))
+                self.averages[symbol] = SelectionData(self.History(symbol, 200, Resolution.Daily))
             self.averages[symbol].update(self.Time, stock.Price)
             if stock.Price > self.averages[symbol].ma_50.Current.Value:
                 stocks.append(stock)
@@ -67,32 +67,32 @@ class RocRotation(QCAlgorithm):
 class SelectionData():
     def __init__(self, history):
         self.rsi = RelativeStrengthIndex(3)
-        self.roc = RateOfChange(50)
-        self.ma_50 = SimpleMovingAverage(50)
+        self.roc = RateOfChangePercent(200)
+        self.ma = SimpleMovingAverage(200)
 
         for data in history.itertuples():
             self.rsi.Update(data.Index[1], data.close)
             self.roc.Update(data.Index[1], data.close)
-            self.ma_50.Update(data.Index[1], data.close)
+            self.ma.Update(data.Index[1], data.close)
 
     def is_ready(self):
-        return self.rsi.IsReady and self.roc.IsReady and self.ma_50.IsReady
+        return self.rsi.IsReady and self.roc.IsReady and self.ma.IsReady
 
     def update(self, time, price):
         self.rsi.Update(time, price)
         self.roc.Update(time, price)
-        self.ma_50.Update(time, price)
+        self.ma.Update(time, price)
 
 
 class SPYSelectionData():
     def __init__(self, history):
-        self.ma_50 = SimpleMovingAverage(50)
+        self.ma = SimpleMovingAverage(200)
 
         for data in history.itertuples():
-            self.ma_50.Update(data.Index[1], data.close)
+            self.ma.Update(data.Index[1], data.close)
 
     def is_ready(self):
-        return self.ma_50.IsReady
+        return self.ma.IsReady
 
     def update(self, time, price):
-        self.ma_50.Update(time, price)
+        self.ma.Update(time, price)
