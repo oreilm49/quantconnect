@@ -4,6 +4,8 @@ from AlgorithmImports import *
 
 SIGNAL_BUY = 'buy'
 SIGNAL_SELL = 'sell'
+LONG_LOOKBACK = 200
+SHORT_LOOKBACK = 50
 
 
 class MarketOnMarketOff(QCAlgorithm):
@@ -16,7 +18,7 @@ class MarketOnMarketOff(QCAlgorithm):
 
     def OnData(self, slice: Slice):
         if not self.data:
-            self.data = SymbolData(self.History(self.Symbol('QQQ'), 50, Resolution.Daily))
+            self.data = SymbolData(self.History(self.qqq.Symbol, LONG_LOOKBACK, Resolution.Daily))
         else:
             prices = slice.get(self.qqq.Symbol)
             if prices:
@@ -39,13 +41,13 @@ class MarketOnMarketOff(QCAlgorithm):
 
 class SymbolData:
     def __init__(self, history):
-        self.dd_window = RollingWindow[int](50)
-        self.ftd_window = RollingWindow[int](50)
-        self.rally_day_window = RollingWindow[int](50)
-        self.low_window = RollingWindow[float](50)
-        self.vol_ma = SimpleMovingAverage(50)
-        self.max = Maximum(200)
-        self.min = Minimum(200)
+        self.dd_window = RollingWindow[int](SHORT_LOOKBACK)
+        self.ftd_window = RollingWindow[int](LONG_LOOKBACK)
+        self.rally_day_window = RollingWindow[int](LONG_LOOKBACK)
+        self.low_window = RollingWindow[float](LONG_LOOKBACK)
+        self.vol_ma = SimpleMovingAverage(SHORT_LOOKBACK)
+        self.max = Maximum(LONG_LOOKBACK)
+        self.min = Minimum(LONG_LOOKBACK)
         self.previous_vol = None
         self.previous_close = None
         self.signal = None
