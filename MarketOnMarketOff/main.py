@@ -31,10 +31,10 @@ class MarketOnMarketOff(QCAlgorithm):
             elif signal == SIGNAL_SELL:
                 self.SetHoldings("SQQQ", 1)
         else:
-            if signal == SIGNAL_BUY and self.ActiveSecurities[self.sqqq].Invested:
+            if signal == SIGNAL_BUY and self.ActiveSecurities[self.sqqq.Symbol].Invested:
                 self.Liquidate()
                 self.SetHoldings("QQQ", 1)
-            if signal == SIGNAL_SELL and self.ActiveSecurities[self.qqq].Invested:
+            if signal == SIGNAL_SELL and self.ActiveSecurities[self.qqq.Symbol].Invested:
                 self.Liquidate()
                 self.SetHoldings("SQQQ", 1)
 
