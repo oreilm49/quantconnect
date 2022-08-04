@@ -89,7 +89,7 @@ class SymbolData:
                     break
             if rally_day_index is None:
                 self.signal = SIGNAL_SELL
-                return False
+                return self.signal
             for ftd_index in reversed(range(rally_day_index)):
                 if self.ftd_window[ftd_index] == 1:
                     # check if ftd failed: if the low of the ftd was taken out.
@@ -99,7 +99,7 @@ class SymbolData:
                     if ftd_low_taken_out:
                         continue
                     self.signal = SIGNAL_BUY
-                    break
+                    return self.signal
         if self.signal in (SIGNAL_BUY, None):
             market_in_distribution = sum(list(self.dd_window)) > 5
             if market_in_distribution:
