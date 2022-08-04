@@ -56,8 +56,8 @@ class SymbolData:
 
     def update(self, time, close, volume):
         self.vol_ma.Update(time, volume)
-        self.max.Update(close)
-        self.min.Update(close)
+        self.max.Update(time, close)
+        self.min.Update(time, close)
         if self.previous_close and self.previous_vol:
             day_change = (close - self.previous_close) / close
             is_distribution_day = day_change < -0.02 and volume > self.previous_vol
