@@ -104,6 +104,8 @@ class SymbolData:
             market_in_distribution = sum(list(self.dd_window)) > 5
             if market_in_distribution:
                 self.signal = SIGNAL_SELL
+            else:
+                self.signal = SIGNAL_BUY
         return self.signal
 
     def ready(self):
