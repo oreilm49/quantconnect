@@ -70,13 +70,13 @@ class SymbolData:
         self.previous_close = close
         self.previous_vol = volume
 
-    def signal(self):
+    def get_signal(self):
         """
         There has been a rally day and a follow through day after a recent bottom.
         The market isn't in distribution
         :return: boolean
         """
-        if self.signal == SIGNAL_SELL:
+        if self.signal in (SIGNAL_SELL, None):
             # find bottom, rally day, follow through day
             # rally day = loop through each day after min day. Look for up day that starts the rally attempt
             # follow through day = loop through each day after rally day. Check ftd conditions
@@ -84,7 +84,9 @@ class SymbolData:
             for day_index in reversed(range(self.min.PeriodsSinceMinimum)):
                 if self.rally_day_window[day_index] == 1:
                     rally_day_index = day_index
+                    break
             if rally_day_index is None:
+                self.signal = SIGNAL_SELL
                 return False
             for ftd_index in reversed(range(rally_day_index)):
                 if self.ftd_window[ftd_index] == 1:
@@ -96,7 +98,7 @@ class SymbolData:
                         continue
                     self.signal = SIGNAL_BUY
                     break
-        else:
+        if self.signal in (SIGNAL_BUY, None):
             market_in_distribution = sum(list(self.dd_window)) > 5
             if market_in_distribution:
                 self.signal = SIGNAL_SELL
