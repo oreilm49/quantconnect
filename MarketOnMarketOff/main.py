@@ -105,3 +105,7 @@ class SymbolData:
             if market_in_distribution:
                 self.signal = SIGNAL_SELL
         return self.signal
+
+    def ready(self):
+        return self.dd_window.IsReady and self.ftd_window.IsReady and self.rally_day_window.IsReady and\
+            self.low_window.IsReady and self.vol_ma.IsReady and self.max.IsReady and self.min.IsReady
