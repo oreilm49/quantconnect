@@ -18,9 +18,11 @@ class MarketOnMarketOff(QCAlgorithm):
         if not self.data:
             self.data = SymbolData(self.History(self.Symbol('QQQ'), 50, Resolution.Daily))
         else:
-            self.data.update(self.Time, slice.close, slice.volume)
-            self.data.low_window.Add(slice.low)
-        signal = self.data.signal()
+            prices = slice.get(self.qqq.Symbol)
+            if prices:
+                self.data.update(self.Time, prices.Close, prices.Volume)
+                self.data.low_window.Add(prices.Low)
+        signal = self.data.get_signal()
         if not self.Portfolio.Invested:
             if signal == SIGNAL_BUY:
                 self.SetHoldings("QQQ", 1)
