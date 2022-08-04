@@ -24,6 +24,8 @@ class MarketOnMarketOff(QCAlgorithm):
             if prices:
                 self.data.update(self.Time, prices.Close, prices.Volume)
                 self.data.low_window.Add(prices.Low)
+        if not self.data.ready():
+            return
         signal = self.data.get_signal()
         if not self.Portfolio.Invested:
             if signal == SIGNAL_BUY:
