@@ -10,7 +10,7 @@ SHORT_LOOKBACK = 50
 
 class MarketOnMarketOff(QCAlgorithm):
     def Initialize(self):
-        self.SetStartDate(2021, 1, 24)
+        self.SetStartDate(2018, 1, 1)
         self.SetCash(100000)
         self.qqq = self.AddEquity("QQQ", Resolution.Daily)
         self.sqqq = self.AddEquity("SQQQ", Resolution.Daily)
