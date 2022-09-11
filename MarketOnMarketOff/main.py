@@ -12,15 +12,17 @@ class MarketOnMarketOff(QCAlgorithm):
     def Initialize(self):
         self.SetStartDate(2018, 1, 1)
         self.SetCash(100000)
-        self.qqq = self.AddEquity("QQQ", Resolution.Daily)
-        self.sqqq = self.AddEquity("SQQQ", Resolution.Daily)
+        self.long_symbol = "SPY"
+        self.short_symbol = "SH"
+        self.long = self.AddEquity(self.long_symbol, Resolution.Daily)
+        self.short = self.AddEquity(self.short_symbol, Resolution.Daily)
         self.data = None
 
     def OnData(self, slice: Slice):
         if not self.data:
-            self.data = SymbolData(self.History(self.qqq.Symbol, LONG_LOOKBACK, Resolution.Daily))
+            self.data = SymbolData(self.History(self.long.Symbol, LONG_LOOKBACK, Resolution.Daily))
         else:
-            prices = slice.get(self.qqq.Symbol)
+            prices = slice.get(self.long.Symbol)
             if prices:
                 self.data.update(self.Time, prices.Close, prices.Volume)
                 self.data.low_window.Add(prices.Low)
@@ -29,16 +31,16 @@ class MarketOnMarketOff(QCAlgorithm):
         signal = self.data.get_signal()
         if not self.Portfolio.Invested:
             if signal == SIGNAL_BUY:
-                self.SetHoldings("QQQ", 1)
+                self.SetHoldings(self.long_symbol, 1)
             elif signal == SIGNAL_SELL:
-                self.SetHoldings("SQQQ", 1)
+                self.SetHoldings(self.short_symbol, 1)
         else:
-            if signal == SIGNAL_BUY and self.ActiveSecurities[self.sqqq.Symbol].Invested:
+            if signal == SIGNAL_BUY and self.ActiveSecurities[self.short.Symbol].Invested:
                 self.Liquidate()
-                self.SetHoldings("QQQ", 1)
-            if signal == SIGNAL_SELL and self.ActiveSecurities[self.qqq.Symbol].Invested:
+                self.SetHoldings(self.long_symbol, 1)
+            if signal == SIGNAL_SELL and self.ActiveSecurities[self.long.Symbol].Invested:
                 self.Liquidate()
-                self.SetHoldings("SQQQ", 1)
+                self.SetHoldings(self.short_symbol, 1)
 
 
 class SymbolData:
@@ -90,7 +92,7 @@ class SymbolData:
             if rally_day_index is None:
                 self.signal = SIGNAL_SELL
                 return self.signal
-            for ftd_index in reversed(range(rally_day_index)):
+            for ftd_index in reversed(range(rally_day_index - 1)):
                 if self.ftd_window[ftd_index] == 1:
                     # check if ftd failed: if the low of the ftd was taken out.
                     # if so, move on to the next ftd_index
