@@ -4,8 +4,8 @@ import base64
 class BaseBuyer(QCAlgorithm):
     
     def Initialize(self):
-        self.SetStartDate(2017, 7, 4)
-        self.SetEndDate(2018, 7, 4)
+        self.SetStartDate(2022, 9, 1)
+        self.SetEndDate(2022, 10, 31)
         self.stocks_map = {}
         self.open_positions = {}
         self.stocks_file_link = 'https://www.dropbox.com/s/b9mxz0qyi9bxi4w/trades.csv?dl=0'
