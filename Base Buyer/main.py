@@ -20,8 +20,12 @@ class BaseBuyer(QCAlgorithm):
     def universe_selector(self, date):
         csv_str = self.Download(self.stocks_file_link if self.LiveMode else self.backtest_stocks_file_link)
         for index, line in enumerate(csv_str.splitlines()):
-            if index == 0: continue
-            symbol, pivot, stop = line.split(',')
+            row = line.split(',')
+            if index == 0 or len(row) < 3:
+                continue
+            symbol = row[0]
+            pivot = row[1]
+            stop = row[2]
             if symbol and pivot and stop:
                 self.stocks_map[symbol] = {
                     'pivot': pivot,
@@ -29,9 +33,9 @@ class BaseBuyer(QCAlgorithm):
                 }
         return list(self.stocks_map.keys())
 
-
     def OnData(self, slice):
-        if slice.Bars.Count == 0: return
+        if slice.Bars.Count == 0:
+            return
         for symbol in self.ActiveSecurities.Keys:
             if self.ActiveSecurities[symbol].Invested:
                 if self.Portfolio[symbol].UnrealizedProfitPercent >= 0.20 or self.position_outdated(symbol):
