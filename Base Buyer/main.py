@@ -23,9 +23,9 @@ class BaseBuyer(QCAlgorithm):
             row = line.split(',')
             if index == 0 or len(row) < 3:
                 continue
-            symbol = row[0]
-            pivot = row[1]
-            stop = row[2]
+            symbol = row[0].strip()
+            pivot = float(row[1])
+            stop = float(row[2])
             if symbol and pivot and stop:
                 self.stocks_map[symbol] = {
                     'pivot': pivot,
