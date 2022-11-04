@@ -9,8 +9,8 @@ class BaseBuyer(QCAlgorithm):
         self.SetEndDate(2022, 10, 31)
         self.stocks_map = {}
         self.open_positions = {}
-        self.stocks_file_link = 'https://www.dropbox.com/s/b9mxz0qyi9bxi4w/trades.csv?dl=1'
-        self.backtest_stocks_file_link = 'https://www.dropbox.com/s/t0atj97efii8zv6/backtest_trades.csv?dl=1'
+        self.stocks_file_link = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_oVGJKqa6xhMcNKG3k5TkK_uXX_GSYvK6GZBqagd8hj1xqk0ONdavJrkl4KWYsomtFFMddD6hO2b5/pubhtml?gid=0&single=true'
+        self.backtest_stocks_file_link = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSujpOFMXOFM9pnjLa8-3kHJqYRSnCeh5ZWkR08HRFi5Xcf018-LQYCG6Pf_OwZFQ-rtTPtcP1Zu2sM/pub?gid=0&single=true&output=csv'
         self.EQUITY_RISK_PC = 0.75
         self.UniverseSettings.Resolution = Resolution.Daily
         # Order margin value has to have a minimum of 0.5% of Portfolio value, allows filtering out small trades and reduce fees.
