@@ -4,4 +4,5 @@ lean.json
 */backtests
 */.idea
 */.vscode
+*.pyc
 /backtest_reports
