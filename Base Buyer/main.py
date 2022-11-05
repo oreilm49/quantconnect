@@ -5,8 +5,8 @@ import base64
 class BaseBuyer(QCAlgorithm):
     
     def Initialize(self):
-        self.SetStartDate(2022, 9, 1)
-        self.SetEndDate(2022, 10, 31)
+        self.SetStartDate(2019, 1, 1)
+        self.SetEndDate(2020, 1, 1)
         self.stocks_map = {}
         self.open_positions = {}
         self.stocks_file_link = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_oVGJKqa6xhMcNKG3k5TkK_uXX_GSYvK6GZBqagd8hj1xqk0ONdavJrkl4KWYsomtFFMddD6hO2b5/pubhtml?gid=0&single=true'
