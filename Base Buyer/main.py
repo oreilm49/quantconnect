@@ -41,7 +41,7 @@ class BaseBuyer(QCAlgorithm):
                 if self.Portfolio[symbol].UnrealizedProfitPercent >= 0.20 or self.position_outdated(symbol):
                     self.Liquidate(symbol)
             else:
-                pivot = self.stocks_map[str(symbol)]['pivot']
+                pivot = self.stocks_map[symbol.Value]['pivot']
                 stock_in_buy_range = self.ActiveSecurities[symbol].Close > pivot < pivot * 1.05
                 if not stock_in_buy_range:
                     continue
