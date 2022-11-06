@@ -16,6 +16,15 @@ class BaseBuyer(QCAlgorithm):
         # Order margin value has to have a minimum of 0.5% of Portfolio value, allows filtering out small trades and reduce fees.
         self.Settings.MinimumOrderMarginPortfolioPercentage = 0.005
         self.AddUniverse("my-dropbox-universe", self.universe_selector)
+        self.csv_str = None
+    
+    def get_csv_str(self):
+        if self.LiveMode:
+            return self.Download(self.stocks_file_link)
+        if self.csv_str:
+            return self.csv_str
+        self.csv_str = self.Download(self.backtest_stocks_file_link)
+        return self.csv_str
 
     def universe_selector(self, date):
         csv_str = self.Download(self.stocks_file_link if self.LiveMode else self.backtest_stocks_file_link)
