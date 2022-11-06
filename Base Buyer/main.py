@@ -27,7 +27,7 @@ class BaseBuyer(QCAlgorithm):
         return self.csv_str
 
     def universe_selector(self, date):
-        csv_str = self.Download(self.stocks_file_link if self.LiveMode else self.backtest_stocks_file_link)
+        csv_str = self.get_csv_str()
         for index, line in enumerate(csv_str.splitlines()):
             row = line.split(',')
             if index == 0 or len(row) < 3:
