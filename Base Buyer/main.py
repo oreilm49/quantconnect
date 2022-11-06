@@ -1,6 +1,5 @@
 from AlgorithmImports import *
-import base64
-
+import datetime
 
 class BaseBuyer(QCAlgorithm):
     
@@ -12,7 +11,7 @@ class BaseBuyer(QCAlgorithm):
         self.stocks_file_link = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_oVGJKqa6xhMcNKG3k5TkK_uXX_GSYvK6GZBqagd8hj1xqk0ONdavJrkl4KWYsomtFFMddD6hO2b5/pubhtml?gid=0&single=true'
         self.backtest_stocks_file_link = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSujpOFMXOFM9pnjLa8-3kHJqYRSnCeh5ZWkR08HRFi5Xcf018-LQYCG6Pf_OwZFQ-rtTPtcP1Zu2sM/pub?gid=0&single=true&output=csv'
         self.EQUITY_RISK_PC = 0.75
-        self.UniverseSettings.Resolution = Resolution.Daily
+        self.UniverseSettings.Resolution = Resolution.Hour
         # Order margin value has to have a minimum of 0.5% of Portfolio value, allows filtering out small trades and reduce fees.
         self.Settings.MinimumOrderMarginPortfolioPercentage = 0.005
         self.AddUniverse("my-dropbox-universe", self.universe_selector)
@@ -46,6 +45,19 @@ class BaseBuyer(QCAlgorithm):
         if slice.Bars.Count == 0:
             return
         for symbol in self.ActiveSecurities.Keys:
+            if symbol.Value not in self.stocks_map:
+                continue
+
+            # initialize volume indicator
+            symbol_history = None
+            if 'vol_ma' not in self.stocks_map[symbol.Value]:
+                vol_ma = SimpleMovingAverage(300)
+                for data in self.History(symbol, 300, Resolution.Hour).itertuples():
+                    vol_ma.Update(data.Index[1], data.volume)
+                self.stocks_map[symbol.Value]['vol_ma'] = vol_ma
+            self.stocks_map[symbol.Value]['vol_ma'].Update(self.Time, slice.Bars[symbol].Volume)
+
+            # buy / sell logic
             if self.ActiveSecurities[symbol].Invested:
                 if self.Portfolio[symbol].UnrealizedProfitPercent >= 0.20 or self.position_outdated(symbol):
                     self.Liquidate(symbol)
@@ -54,13 +66,14 @@ class BaseBuyer(QCAlgorithm):
                 stock_in_buy_range = self.ActiveSecurities[symbol].Close > pivot < pivot * 1.05
                 if not stock_in_buy_range:
                     continue
-                atr = AverageTrueRange(21)
-                vol_ma = RelativeDailyVolume(symbol, 50)
-                for data in self.History(symbol, 50, Resolution.Daily).itertuples():
-                    trade_bar = TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
-                    atr.Update(trade_bar)
-                    vol_ma.Update(trade_bar)
-                if vol_ma.Current.Value > 1:
+                vol = self.stocks_map[symbol.Value]['vol_ma']
+                if vol.IsReady and slice.Bars[symbol].Volume > vol.Current.Value:
+                    self.Debug(f"{symbol.Value} vol {vol.Current.Value}")
+                    atr = AverageTrueRange(21)
+                    symbol_history = symbol_history or self.History(symbol, 21, Resolution.Daily).itertuples()
+                    for data in symbol_history:
+                        atr.Update(
+                            TradeBar(data.Index[1], symbol, data.open, data.high, data.low, data.close, data.volume, datetime.timedelta(days=1)))
                     position_size = self.calculate_position_size(atr.Current.Value)
                     position_value = position_size * self.ActiveSecurities[symbol].Price
                     if position_value < self.Portfolio.Cash:
