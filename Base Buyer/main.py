@@ -7,7 +7,6 @@ class BaseBuyer(QCAlgorithm):
         self.SetStartDate(2019, 1, 1)
         self.SetEndDate(2020, 1, 1)
         self.stocks_map = {}
-        self.open_positions = {}
         self.stocks_file_link = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_oVGJKqa6xhMcNKG3k5TkK_uXX_GSYvK6GZBqagd8hj1xqk0ONdavJrkl4KWYsomtFFMddD6hO2b5/pubhtml?gid=0&single=true'
         self.backtest_stocks_file_link = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSujpOFMXOFM9pnjLa8-3kHJqYRSnCeh5ZWkR08HRFi5Xcf018-LQYCG6Pf_OwZFQ-rtTPtcP1Zu2sM/pub?gid=0&single=true&output=csv'
         self.EQUITY_RISK_PC = 0.01
@@ -78,7 +77,7 @@ class BaseBuyer(QCAlgorithm):
                     position_value = position_size * self.ActiveSecurities[symbol].Price
                     if position_value < self.Portfolio.Cash:
                         self.MarketOrder(symbol, position_size)
-                        self.open_positions[symbol] = self.Time
+                        self.StopMarketOrder(symbol, -1 * position_size, self.stocks_map[symbol.Value]['stop'])
 
     def calculate_position_size(self, atr):
         return round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / atr)
