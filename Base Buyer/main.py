@@ -10,7 +10,7 @@ class BaseBuyer(QCAlgorithm):
         self.open_positions = {}
         self.stocks_file_link = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS_oVGJKqa6xhMcNKG3k5TkK_uXX_GSYvK6GZBqagd8hj1xqk0ONdavJrkl4KWYsomtFFMddD6hO2b5/pubhtml?gid=0&single=true'
         self.backtest_stocks_file_link = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSujpOFMXOFM9pnjLa8-3kHJqYRSnCeh5ZWkR08HRFi5Xcf018-LQYCG6Pf_OwZFQ-rtTPtcP1Zu2sM/pub?gid=0&single=true&output=csv'
-        self.EQUITY_RISK_PC = 0.75
+        self.EQUITY_RISK_PC = 0.01
         self.UniverseSettings.Resolution = Resolution.Hour
         # Order margin value has to have a minimum of 0.5% of Portfolio value, allows filtering out small trades and reduce fees.
         self.Settings.MinimumOrderMarginPortfolioPercentage = 0.005
