@@ -30,14 +30,17 @@ class BaseBuyer(QCAlgorithm):
             row = line.split(',')
             if index == 0 or len(row) < 3:
                 continue
-            symbol = row[0].strip()
-            pivot = float(row[1])
-            stop = float(row[2])
-            if symbol and pivot and stop:
-                self.stocks_map[symbol] = {
-                    'pivot': pivot,
-                    'stop': stop
-                }
+            try:
+                symbol = row[0].strip()
+                pivot = float(row[1])
+                stop = float(row[2])
+                if symbol and pivot and stop:
+                    self.stocks_map[symbol] = {
+                        'pivot': pivot,
+                        'stop': stop
+                    }
+            except:
+                continue
         return list(self.stocks_map.keys())
 
     def OnData(self, slice):
