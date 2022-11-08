@@ -65,6 +65,8 @@ class BaseBuyer(QCAlgorithm):
                 stock_in_buy_range = self.ActiveSecurities[symbol].Close > pivot < pivot * 1.05
                 if not stock_in_buy_range:
                     continue
+                if not slice.Bars[symbol].Close > slice.Bars[symbol].Open:
+                    continue
                 vol = self.stocks_map[symbol.Value]['vol_ma']
                 if vol.IsReady and slice.Bars[symbol].Volume > vol.Current.Value:
                     self.Debug(f"{symbol.Value} vol {vol.Current.Value}")
