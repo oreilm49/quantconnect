@@ -2,12 +2,23 @@ from AlgorithmImports import *
 
 
 class SymbolIndicators:
-    def __init__(self, bollinger, keltner, donchian, mfi, atr) -> None:
-        self.bollinger = bollinger
-        self.keltner = keltner
-        self.donchian = donchian
-        self.mfi = mfi
-        self.atr = atr
+    def __init__(self, history) -> None:
+        self.bollinger = BollingerBands(21, 2)
+        self.keltner = KeltnerChannels(21, 2)
+        self.donchian = DonchianChannel(21, 2)
+        self.mfi = MoneyFlowIndex(5)
+        self.atr = AverageTrueRange(21)
+
+        for data in history.itertuples():
+            trade_bar = TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
+            self.update(trade_bar)
+        
+    def update(self, trade_bar):
+        self.bollinger.Update(trade_bar.EndTime, trade_bar.Close)
+        self.keltner.Update(trade_bar)
+        self.donchian.Update(trade_bar)
+        self.mfi.Update(trade_bar)
+        self.atr.Update(trade_bar)
     
     @property
     def ready(self):
@@ -42,33 +53,26 @@ class MomentumETF(QCAlgorithm):
         self.SetEndDate(2020, 1, 1)
         self.SetCash(100000)
         self.UniverseSettings.Resolution = Resolution.Daily
-        self.SetWarmUp(21, Resolution.Daily)
-        tickers = ['AAPL']
+        self.EQUITY_RISK_PC = 0.01
+        tickers = ['SPY']
         self.symbol_map = {}
-        self.EnableAutomaticIndicatorWarmUp = True
         for ticker in tickers:
-            symbol = self.AddEquity(ticker).Symbol
-            self.symbol_map[symbol] = SymbolIndicators(
-                self.BB(symbol, 21, 2),
-                self.KCH(symbol, 21, 2),
-                self.DCH(symbol, 21, 2),
-                self.MFI(symbol, 5),
-                self.ATR(symbol, 21),
-            )
+            self.AddEquity(ticker, Resolution.Daily)
 
     def OnData(self, slice):
-        self.Debug(self.Time)
-        if self.IsWarmingUp:
-            return
         uninvested = []
         for symbol in self.ActiveSecurities.Keys:
             if symbol not in self.symbol_map:
+                self.symbol_map[symbol] = SymbolIndicators(
+                    self.History(symbol, 21, Resolution.Daily)
+                )
+            else:
+                self.symbol_map[symbol].update(slice.Bars[symbol])
+            if not slice.Bars.ContainsKey(symbol):
+                self.Debug("symbol not in slice")
                 continue
             if not self.symbol_map[symbol].ready:
                 self.Debug("indicators not ready")
-                continue
-            if not slice.ContainsKey(symbol):
-                self.Debug("symbol not in slice")
                 continue
             if not self.ActiveSecurities[symbol].Invested:
                 uninvested.append(symbol)
