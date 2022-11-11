@@ -73,15 +73,15 @@ class MomentumETF(QCAlgorithm):
     def OnData(self, slice):
         uninvested = []
         for symbol in self.ActiveSecurities.Keys:
+            if not slice.Bars.ContainsKey(symbol):
+                self.Debug("symbol not in slice")
+                continue
             if symbol not in self.symbol_map:
                 self.symbol_map[symbol] = SymbolIndicators(
                     self.History(symbol, 21, Resolution.Daily)
                 )
             else:
                 self.symbol_map[symbol].update(slice.Bars[symbol])
-            if not slice.Bars.ContainsKey(symbol):
-                self.Debug("symbol not in slice")
-                continue
             if not self.symbol_map[symbol].ready:
                 self.Debug("indicators not ready")
                 continue
