@@ -54,7 +54,18 @@ class MomentumETF(QCAlgorithm):
         self.SetCash(100000)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.EQUITY_RISK_PC = 0.01
-        tickers = ['SPY']
+        tickers = [
+            "GXLE",
+            "GXLK",
+            "GXLV",
+            "GXLF",
+            "SXLP",
+            "SXLI",
+            "GXLC",
+            "SXLY",
+            "SXLB",
+            "SXLU",
+        ]
         self.symbol_map = {}
         for ticker in tickers:
             self.AddEquity(ticker, Resolution.Daily)
