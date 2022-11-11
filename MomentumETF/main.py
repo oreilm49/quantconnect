@@ -65,6 +65,17 @@ class MomentumETF(QCAlgorithm):
             "SXLY",
             "SXLB",
             "SXLU",
+        ] if self.LiveMode else [
+            "XLE",
+            "XLK",
+            "XLV",
+            "XLF",
+            "XLP",
+            "XLI",
+            "XLC",
+            "XLY",
+            "XLB",
+            "XLU",
         ]
         self.symbol_map = {}
         for ticker in tickers:
