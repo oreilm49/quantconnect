@@ -50,7 +50,7 @@ class SymbolIndicators:
 class MomentumETF(QCAlgorithm):
     def Initialize(self):
         self.SetStartDate(2019, 1, 1)
-        self.SetEndDate(2020, 1, 1)
+        self.SetEndDate(2022, 11, 1)
         self.SetCash(100000)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.EQUITY_RISK_PC = 0.01
