@@ -1,4 +1,5 @@
 from AlgorithmImports import *
+from datetime import timedelta
 
 
 class SymbolIndicators:
@@ -52,6 +53,7 @@ class MomentumETF(QCAlgorithm):
         self.SetStartDate(2019, 1, 1)
         self.SetEndDate(2022, 11, 1)
         self.SetCash(100000)
+        self.SetWarmUp(timedelta(21), Resolution.Daily)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.EQUITY_RISK_PC = 0.01
         tickers = [
@@ -78,6 +80,7 @@ class MomentumETF(QCAlgorithm):
             "XLU",
         ]
         self.symbol_map = {}
+        self.warm_up_buy_signals = set()
         for ticker in tickers:
             self.AddEquity(ticker, Resolution.Daily)
 
@@ -109,14 +112,22 @@ class MomentumETF(QCAlgorithm):
             reverse=True,
         )
         for symbol in uninvested:
+            if symbol in self.warm_up_buy_signals:
+                self.buy(symbol)
+                continue
             if not self.symbol_map[symbol].mfi.Current.Value >= 80:
                 continue
             self.Debug(f"overbought: {self.ActiveSecurities[symbol].Price} {self.symbol_map[symbol].lowest_upper_band}")
             if self.ActiveSecurities[symbol].Price >= self.symbol_map[symbol].lowest_upper_band:
-                position_size = self.calculate_position_size(self.symbol_map[symbol].atr.Current.Value)
-                position_value = position_size * self.ActiveSecurities[symbol].Price
-                if position_value < self.Portfolio.Cash:
-                    self.MarketOrder(symbol, position_size)
+                self.buy(symbol)
     
-    def calculate_position_size(self, atr):
-        return round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / atr)
+    def buy(self, symbol):
+        if self.IsWarmingUp:
+            self.warm_up_buy_signals.add(symbol)
+        else:
+            position_size = round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / self.symbol_map[symbol].atr.Current.Value)
+            position_value = position_size * self.ActiveSecurities[symbol].Price
+            if position_value < self.Portfolio.Cash:
+                self.MarketOrder(symbol, position_size)
+                if symbol in self.warm_up_buy_signals:
+                    self.warm_up_buy_signals.remove(symbol)
