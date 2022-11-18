@@ -55,6 +55,7 @@ class MomentumETF(QCAlgorithm):
         self.SetCash(100000)
         self.SetWarmUp(timedelta(21), Resolution.Daily)
         self.UniverseSettings.Resolution = Resolution.Daily
+        self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
         self.EQUITY_RISK_PC = 0.01
         tickers = [
             "GXLE",
