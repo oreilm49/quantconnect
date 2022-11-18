@@ -101,11 +101,10 @@ class MomentumETF(QCAlgorithm):
                 continue
             if not self.ActiveSecurities[symbol].Invested:
                 uninvested.append(symbol)
-            else:
-                highest_lower_band = self.symbol_map[symbol].highest_lower_band
-                mfi_oversold = self.symbol_map[symbol].mfi.Current.Value <= 20
-                if slice.Bars[symbol].Low <= highest_lower_band and mfi_oversold:
-                    self.Liquidate(symbol)
+                if symbol in self.warm_up_buy_signals and self.sell_signal(symbol, slice):
+                    self.warm_up_buy_signals.remove(symbol)
+            elif self.sell_signal(symbol, slice):
+                self.Liquidate(symbol)
         uninvested = sorted(
             uninvested, 
             key=lambda symbol: self.symbol_map[symbol].mfi.Current.Value, 
@@ -131,3 +130,8 @@ class MomentumETF(QCAlgorithm):
                 self.MarketOrder(symbol, position_size)
                 if symbol in self.warm_up_buy_signals:
                     self.warm_up_buy_signals.remove(symbol)
+    
+    def sell_signal(self, symbol, slice):
+        highest_lower_band = self.symbol_map[symbol].highest_lower_band
+        mfi_oversold = self.symbol_map[symbol].mfi.Current.Value <= 20
+        return slice.Bars[symbol].Low <= highest_lower_band and mfi_oversold
