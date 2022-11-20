@@ -5,37 +5,45 @@ from AlgorithmImports import *
 class SymbolIndicators:
     def __init__(self) -> None:
         self.ma = SimpleMovingAverage(50)
-        self.ema = ExponentialMovingAverage(21)
+        self.ma_long = SimpleMovingAverage(200)
         self.atr = AverageTrueRange(21)
-        self.ema_window = RollingWindow[int](3)
+        self.closed_below_window = RollingWindow[bool](2)
         
     def update(self, trade_bar):
         self.ma.Update(trade_bar.EndTime, trade_bar.Close)
-        self.ema.Update(trade_bar.EndTime, trade_bar.Close)
+        self.ma_long.Update(trade_bar.EndTime, trade_bar.Close)
         self.atr.Update(trade_bar)
-        if self.ema.IsReady:
-            self.ema_window.Add(self.ema.Current.Value)
+        if self.ma.IsReady and self.ma.Current.Value > trade_bar.Close:
+            self.closed_below_window.Add(True)
+        else:
+            self.closed_below_window.Add(False)
     
     @property
     def ready(self):
         return all((
             self.ma.IsReady,
-            self.ema.IsReady,
-            self.ema_window.IsReady,
+            self.ma_long.IsReady,
+            self.closed_below_window.IsReady,
         ))
 
 class CryptoMomentum(QCAlgorithm):
 
     def Initialize(self):
+        resolution = Resolution.Daily
+        self.SetBrokerageModel(BrokerageName.Binance, AccountType.Cash)
         self.SetStartDate(2018, 1, 1)
-        self.SetCash(9000)
-        self.SetWarmUp(timedelta(50), Resolution.Daily)
+        self.SetCash('USDT', 9000)
+        self.SetWarmUp(timedelta(200), resolution)
         self.EQUITY_RISK_PC = 0.01
         tickers = [
-            "BTCUSD",
+            "BTCUSDT",
+            "ETHUSDT",
         ]
         for ticker in tickers:
-            self.AddCrypto(ticker, Resolution.Daily)
+            symbol = self.AddCrypto(ticker, resolution, Market.Binance).Symbol
+            trade_plot = Chart(f'Trade Plot {symbol.Value}')
+            trade_plot.AddSeries(Series('Longs', SeriesType.Scatter, "", Color.Green, ScatterMarkerSymbol.Triangle))
+            self.AddChart(trade_plot)
         self.symbol_map = {}
 
     def OnData(self, data: Slice):
@@ -48,17 +56,16 @@ class CryptoMomentum(QCAlgorithm):
             if self.IsWarmingUp or not self.symbol_map[symbol].ready:
                 continue
             close = data.Bars[symbol].Close
-            ema = self.symbol_map[symbol].ema.Current.Value
             ma = self.symbol_map[symbol].ma.Current.Value
-            ema_vals = list(reversed(list(self.symbol_map[symbol].ema_window)))
-            ema_increasing = all(prev_val < next_val for prev_val, next_val in zip(ema_vals, ema_vals[1:]))
-            if not self.Portfolio.Invested:
-                if close > ema:
-                    if ema_increasing:
-                        if ema > ma:
-                            self.buy(symbol)
-            elif close < ema or not ema_increasing or ema < ma:
-                self.Liquidate()
+            ma_long = self.symbol_map[symbol].ma_long.Current.Value
+            prev_close_below_ma = self.symbol_map[symbol].closed_below_window[1]
+            if not self.ActiveSecurities[symbol].Invested:
+                if ma > ma_long:
+                    if prev_close_below_ma and close > ma:
+                        self.buy(symbol)
+                        self.Plot(f'Trade Plot {symbol.Value}', "Longs", close)
+            elif close < ma or ma_long > ma or ma_long > close:
+                self.Liquidate(symbol)
     
     def buy(self, symbol):
         position_size = (self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / self.symbol_map[symbol].atr.Current.Value
