@@ -84,27 +84,33 @@ class MomentumETF(QCAlgorithm):
         self.warm_up_buy_signals = set()
         for ticker in tickers:
             self.AddEquity(ticker, Resolution.Daily)
+    
+    def live_log(self, msg):
+        if self.LiveMode:
+            self.Log(msg)
 
-    def OnData(self, slice):
+    def OnData(self, data):
         uninvested = []
+        self.Debug(f"{self.Time} - {','.join([symbol.Value for symbol in self.warm_up_buy_signals])}")
         for symbol in self.ActiveSecurities.Keys:
-            if not slice.Bars.ContainsKey(symbol):
-                self.Debug("symbol not in slice")
+            if not data.Bars.ContainsKey(symbol):
+                self.Debug("symbol not in data")
                 continue
             if symbol not in self.symbol_map:
                 self.symbol_map[symbol] = SymbolIndicators(
                     self.History(symbol, 21, Resolution.Daily)
                 )
             else:
-                self.symbol_map[symbol].update(slice.Bars[symbol])
+                self.symbol_map[symbol].update(data.Bars[symbol])
             if not self.symbol_map[symbol].ready:
                 self.Debug("indicators not ready")
                 continue
             if not self.ActiveSecurities[symbol].Invested:
                 uninvested.append(symbol)
-                if symbol in self.warm_up_buy_signals and self.sell_signal(symbol, slice):
+                if symbol in self.warm_up_buy_signals and self.sell_signal(symbol, data):
+                    self.Debug(f"removing warmed up buy signal: {symbol.Value}")
                     self.warm_up_buy_signals.remove(symbol)
-            elif self.sell_signal(symbol, slice):
+            elif self.sell_signal(symbol, data):
                 self.Liquidate(symbol)
         uninvested = sorted(
             uninvested, 
@@ -113,6 +119,7 @@ class MomentumETF(QCAlgorithm):
         )
         for symbol in uninvested:
             if symbol in self.warm_up_buy_signals:
+                self.Debug(f"buying warmed up symbol: {symbol.Value}")
                 self.buy(symbol)
                 continue
             if not self.symbol_map[symbol].mfi.Current.Value >= 80:
@@ -123,14 +130,19 @@ class MomentumETF(QCAlgorithm):
     
     def buy(self, symbol):
         if self.IsWarmingUp:
+            self.Debug(f"adding symbol to warm  up signals: {symbol.Value}")
             self.warm_up_buy_signals.add(symbol)
         else:
             position_size = round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / self.symbol_map[symbol].atr.Current.Value)
             position_value = position_size * self.ActiveSecurities[symbol].Price
+            self.live_log(f"buying {symbol.Value}")
             if position_value < self.Portfolio.Cash:
                 self.MarketOrder(symbol, position_size)
                 if symbol in self.warm_up_buy_signals:
                     self.warm_up_buy_signals.remove(symbol)
+                    self.Debug(f"symbol purchased and removed from warm up signals: {symbol.Value}")
+            else:
+                self.live_log(f"insufficient cash ({self.Portfolio.Cash}) to purchase {symbol.Value}")
     
     def sell_signal(self, symbol, slice):
         highest_lower_band = self.symbol_map[symbol].highest_lower_band
