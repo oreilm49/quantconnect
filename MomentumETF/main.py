@@ -50,7 +50,7 @@ class SymbolIndicators:
 
 class MomentumETF(QCAlgorithm):
     def Initialize(self):
-        self.SetStartDate(2019, 1, 1)
+        self.SetStartDate(2002, 1, 1)
         self.SetEndDate(2022, 11, 1)
         self.SetCash(10000)
         self.SetWarmUp(timedelta(21), Resolution.Daily)
