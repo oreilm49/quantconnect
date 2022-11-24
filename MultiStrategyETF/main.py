@@ -1,4 +1,8 @@
 from AlgorithmImports import *
+from typing import Dict, List, Tuple
+
+SYMBOLS = 'symbols'
+POSITIONS = 'positions'
 
 
 class SymbolIndicators:
@@ -24,7 +28,7 @@ class SymbolIndicators:
 class BaseAlpha(object):
     EQUITY_RISK_PC = 0.01
 
-    def __init__(self, algorithm: QCAlgorithm, indicators: dict[Symbol, SymbolIndicators], bars, ondata_symbols: list[Symbol]) -> None:
+    def __init__(self, algorithm: QCAlgorithm, indicators: Dict[Symbol, SymbolIndicators], bars, ondata_symbols: List[Symbol]) -> None:
         self.algorithm = algorithm
         self.indicators = indicators
         self.bars = bars
@@ -37,16 +41,16 @@ class BaseAlpha(object):
         return round((self.algorithm.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / atr)
     
     @property
-    def positions(self) -> dict[Symbol, int]:
-        return self.algorithm.alpha_map[str(self.__class__)]['positions']
+    def positions(self) -> Dict[Symbol, int]:
+        return self.algorithm.alpha_map[self.__class__][POSITIONS]
     
     @property
-    def symbols(self) -> list[Symbol]:
-        return [symbol for symbol in self.ondata_symbols if symbol in self.algorithm.alpha_map[str(self.__class__)]['symbols']]
+    def symbols(self) -> List[Symbol]:
+        return [symbol for symbol in self.ondata_symbols if symbol in self.algorithm.alpha_map[self.__class__][SYMBOLS]]
     
 
 class RateOfChangeAlpha(BaseAlpha):
-    def get_signals(self) -> list[Symbol, int]:
+    def get_signals(self) -> List[Tuple[Symbol, int]]:
         signals = []
         highest_roc = sorted(
             self.symbols, 
@@ -96,7 +100,10 @@ class MultiStrategyETF(QCAlgorithm):
         ]
         self.symbol_map = {}
         self.alpha_map = {
-            RateOfChangeAlpha: tickers
+            RateOfChangeAlpha: {
+                SYMBOLS: tickers,
+                POSITIONS: {},
+            }
         }
         for alpha_tickers in self.alpha_map.values():
             for ticker in alpha_tickers:
