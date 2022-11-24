@@ -102,7 +102,7 @@ class MultiStrategyETF(QCAlgorithm):
             }
         }
         for alpha_tickers in self.alpha_map.values():
-            for ticker in alpha_tickers:
+            for ticker in alpha_tickers[SYMBOLS]:
                 self.AddEquity(ticker, Resolution.Daily)
 
     def update_indicators(self, data) -> Iterator[Symbol]:
