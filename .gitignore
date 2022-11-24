@@ -6,3 +6,4 @@ lean.json
 */.vscode
 *.pyc
 /backtest_reports
+*.csv
