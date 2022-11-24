@@ -28,11 +28,11 @@ class SymbolIndicators:
 class BaseAlpha(object):
     EQUITY_RISK_PC = 0.01
 
-    def __init__(self, algorithm: QCAlgorithm, indicators: Dict[Symbol, SymbolIndicators], bars, ondata_symbols: List[Symbol]) -> None:
+    def __init__(self, algorithm: QCAlgorithm, indicators: Dict[Symbol, SymbolIndicators], bars, symbols: List[Symbol]) -> None:
         self.algorithm = algorithm
         self.indicators = indicators
         self.bars = bars
-        self.ondata_symbols = ondata_symbols
+        self.symbols = symbols
     
     def get_signals(self) -> int:
         raise NotImplementedError()
@@ -43,10 +43,6 @@ class BaseAlpha(object):
     @property
     def positions(self) -> Dict[Symbol, int]:
         return self.algorithm.alpha_map[self.__class__][POSITIONS]
-    
-    @property
-    def symbols(self) -> List[Symbol]:
-        return [symbol for symbol in self.ondata_symbols if symbol in self.algorithm.alpha_map[self.__class__][SYMBOLS]]
     
 
 class RateOfChangeAlpha(BaseAlpha):
@@ -122,8 +118,9 @@ class MultiStrategyETF(QCAlgorithm):
 
     def OnData(self, data):
         symbols = list(self.update_indicators(data))
-        for Alpha in self.alpha_map:
-            for signal in Alpha(self, self.symbol_map, data.Bars, symbols).get_signals():
+        for Alpha in self.alpha_map.keys():
+            allowed_symbols = [symbol for symbol in symbols if symbol in self.alpha_map[Alpha][SYMBOLS]]
+            for signal in Alpha(self, self.symbol_map, data.Bars, allowed_symbols).get_signals():
                 if signal:
                     symbol, size = signal
                     self.MarketOrder(symbol, size)
