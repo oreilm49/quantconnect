@@ -79,7 +79,7 @@ class MonthlyRotation(BaseAlpha):
             reverse=True,
         )[:3]
         for symbol in self.symbols:
-            if not self.algorithm.ActiveSecurities[symbol].Invested:
+            if symbol not in self.positions:
                 if symbol in highest_sharpe:
                     signals.append((symbol, self.calculate_position_size(self.indicators[symbol].atr.Current.Value)))
             elif symbol not in highest_sharpe:
@@ -96,18 +96,18 @@ class BuyTheWorstMeanReversion(BaseAlpha):
 
     def get_signals(self) -> List[Tuple[Symbol, int]]:
         signals = []
-        if not self.rebalancing_due:
+        if not self.rebalancing_due or not self.symbols:
             return []   
-        worst_performers = sorted(
+        worst_performer = sorted(
             self.symbols, 
             key=lambda symbol: self.indicators[symbol].monthly_performance, 
             reverse=True,
         )[0]
         for symbol in self.symbols:
-            if not self.algorithm.ActiveSecurities[symbol].Invested:
-                if symbol in worst_performers:
+            if symbol not in self.positions:
+                if symbol == worst_performer:
                     signals.append((symbol, self.calculate_position_size(self.indicators[symbol].atr.Current.Value)))
-            elif symbol not in worst_performers:
+            elif symbol != worst_performer:
                 existing_position_size = self.positions[symbol]
                 signals.append((symbol, -1 * existing_position_size))
         return signals
@@ -162,9 +162,8 @@ class MultiStrategyETF(QCAlgorithm):
                 REBALANCED_DATE: None,
             },
         }
-        for alpha_tickers in self.alpha_map.values():
-            for ticker in alpha_tickers[SYMBOLS]:
-                self.AddEquity(ticker, Resolution.Daily)
+        for ticker in tickers:
+            self.AddEquity(ticker, Resolution.Daily)
 
     def update_indicators(self, data) -> Iterator[Symbol]:
         for symbol in self.ActiveSecurities.Keys:
@@ -179,9 +178,16 @@ class MultiStrategyETF(QCAlgorithm):
 
     def OnData(self, data):
         symbols = list(self.update_indicators(data))
+        if not symbols:
+            return
         for Alpha in self.alpha_map.keys():
-            allowed_symbols = [symbol for symbol in symbols if symbol in self.alpha_map[Alpha][SYMBOLS]]
+            allowed_symbols = [symbol for symbol in symbols if str(symbol.Value) in self.alpha_map[Alpha][SYMBOLS]]
             for signal in Alpha(self, self.symbol_map, data.Bars, allowed_symbols).get_signals():
                 if signal:
                     symbol, size = signal
-                    self.MarketOrder(symbol, size)
+                    if size > 0:
+                        value = size * self.ActiveSecurities[symbol].Price
+                        if value < self.Portfolio.Cash:
+                            self.MarketOrder(symbol, size)
+                    else:
+                        self.MarketOrder(symbol, size)
