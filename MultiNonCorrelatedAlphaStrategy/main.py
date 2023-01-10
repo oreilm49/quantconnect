@@ -27,6 +27,11 @@ class BaseAlphaModel(AlphaModel):
 
 
 class MonthlyRateOfChangeTrendFollowingAlpha(BaseAlphaModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.roc_lookback = kwargs['roc_lookback']
+        self.atr_lookback = kwargs['atr_lookback']
+    
     def Update(self, algorithm, data):
         if algorithm.Time.month == self.last_month:
             return []
@@ -45,7 +50,7 @@ class MonthlyRateOfChangeTrendFollowingAlpha(BaseAlphaModel):
 
     def OnSecuritiesChanged(self, algorithm, changes):
         for added in changes.AddedSecurities:
-            self.symbols[added.Symbol] = MonthlyRateOfChangeTrendFollowingData(algorithm, added, self.resolution)
+            self.symbols[added.Symbol] = MonthlyRateOfChangeTrendFollowingData(algorithm, added, self.resolution, roc_lookback=self.roc_lookback, atr_lookback=self.atr_lookback)
 
         for removed in changes.RemovedSecurities:
             data = self.symbols.pop(removed.Symbol, None)
@@ -58,10 +63,10 @@ class MonthlyRateOfChangeTrendFollowingAlpha(BaseAlphaModel):
 
 
 class MonthlyRateOfChangeTrendFollowingData:
-    def __init__(self, algorithm, security, resolution):
+    def __init__(self, algorithm, security, resolution, roc_lookback = 200, atr_lookback = 21):
         self.security = security
-        self.roc = RateOfChangePercent(200)
-        self.atr = AverageTrueRange(21)
+        self.roc = RateOfChangePercent(roc_lookback)
+        self.atr = AverageTrueRange(atr_lookback)
         self.Consolidator = algorithm.ResolveConsolidator(security.Symbol, resolution)
         algorithm.RegisterIndicator(security.Symbol, self.roc, self.Consolidator)
         algorithm.RegisterIndicator(security.Symbol, self.atr, self.Consolidator)
@@ -100,7 +105,7 @@ class MultiNonCorrelatedAlphaStrategy(QCAlgorithm):
         self.spy = self.AddEquity("SPY", Resolution.Daily)
         self.SetAlpha(
             CompositeAlphaModel(
-                MonthlyRateOfChangeTrendFollowingAlpha(spy=self.spy.Symbol, equity_risk_pc=self.EQUITY_RISK_PC),
+                MonthlyRateOfChangeTrendFollowingAlpha(spy=self.spy.Symbol, equity_risk_pc=self.EQUITY_RISK_PC, roc_lookback=200, atr_lookback=21),
             )
         )
         self.SetPortfolioConstruction(EqualWeightingPortfolioConstructionModel(self.DateRules.MonthStart()))
