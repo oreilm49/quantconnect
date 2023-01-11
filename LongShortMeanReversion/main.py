@@ -1,7 +1,7 @@
 import datetime
 from AlgorithmImports import Resolution, Time, Extensions, InsightDirection, Insight, InsightType,\
     AlphaModel, AverageDirectionalIndex, AverageTrueRange, SimpleMovingAverage, RelativeStrengthIndex,\
-    BrokerageName, QCAlgorithm, QC500UniverseSelectionModel, CompositeAlphaModel, EqualWeightingPortfolioConstructionModel,\
+    BrokerageName, QCAlgorithm, QC500UniverseSelectionModel, CompositeAlphaModel, ConfidenceWeightedPortfolioConstructionModel,\
     ImmediateExecutionModel, MaximumDrawdownPercentPerSecurity, MaximumUnrealizedProfitPercentPerSecurity
 
 
@@ -78,7 +78,8 @@ class MeanReversionAlpha(AlphaModel):
     
     def get_insight(self, algorithm, data, symbol):
         confidence = self.get_confidence_for_symbol(algorithm, data, symbol)
-        return Insight(symbol, self.prediction_interval, InsightType.Price, self.direction, confidence, None)
+        # Insight(symbol, period, type, direction, magnitude=None, confidence=None, sourceModel=None, weight=None)
+        return Insight(symbol, self.prediction_interval, InsightType.Price, self.direction, None, confidence)
 
     def get_confidence_for_symbol(self, algorithm, data, symbol):
         position_size = (algorithm.Portfolio.TotalPortfolioValue * self.equity_risk_pc) / self.symbols[symbol].atr.Current.Value
@@ -123,7 +124,7 @@ class LongShortMeanReversion(QCAlgorithm):
             )
         )
         # rebalance every Sunday & Wednesday
-        self.SetPortfolioConstruction(EqualWeightingPortfolioConstructionModel(self.DateRules.Every([0, 3])))
+        self.SetPortfolioConstruction(ConfidenceWeightedPortfolioConstructionModel(self.DateRules.Every([0, 3])))
         self.SetExecution(ImmediateExecutionModel())
         self.Settings.RebalancePortfolioOnInsightChanges = False
         self.Settings.RebalancePortfolioOnSecurityChanges = False
