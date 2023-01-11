@@ -118,6 +118,7 @@ class LongShortMeanReversion(QCAlgorithm):
                 MeanReversionAlpha(direction=InsightDirection.Down, equity_risk_pc=self.EQUITY_RISK_PC, adx_lookback=7, atr_lookback=10, rsi_lookback=3, sma_lookback=150),
             )
         )
+        # rebalance every Sunday & Wednesday
         self.SetPortfolioConstruction(EqualWeightingPortfolioConstructionModel(self.DateRules.Every([0, 3])))
         self.SetExecution(ImmediateExecutionModel())
         self.Settings.RebalancePortfolioOnInsightChanges = False
