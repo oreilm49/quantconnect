@@ -1,4 +1,9 @@
-from AlgorithmImports import *
+import datetime
+from AlgorithmImports import Resolution, Time, Extensions, InsightDirection, Insight, InsightType,\
+    AlphaModel, AverageDirectionalIndex, AverageTrueRange, SimpleMovingAverage, RelativeStrengthIndex,\
+    BrokerageName, QCAlgorithm, QC500UniverseSelectionModel, CompositeAlphaModel, EqualWeightingPortfolioConstructionModel,\
+    ImmediateExecutionModel, MaximumDrawdownPercentPerSecurity, MaximumUnrealizedProfitPercentPerSecurity, RateOfChangePercent, \
+    NullRiskManagementModel
 
 
 class BaseAlphaModel(AlphaModel):
@@ -96,7 +101,7 @@ class MultiNonCorrelatedAlphaStrategy(QCAlgorithm):
     def Initialize(self):
         self.SetStartDate(2020, 1, 1)
         self.SetCash(100000)
-        self.SetWarmUp(timedelta(200), Resolution.Daily)
+        self.SetWarmUp(datetime.timedelta(200), Resolution.Daily)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
         self.SetUniverseSelection(MyQC500())
