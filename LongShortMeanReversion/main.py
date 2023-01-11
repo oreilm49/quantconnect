@@ -1,13 +1,45 @@
 import datetime
-from AlgorithmImports import *
+from AlgorithmImports import Resolution, Time, Extensions, InsightDirection, Insight, InsightType,\
+    AlphaModel, AverageDirectionalIndex, AverageTrueRange, SimpleMovingAverage, RelativeStrengthIndex,\
+    BrokerageName, QCAlgorithm, QC500UniverseSelectionModel, CompositeAlphaModel, EqualWeightingPortfolioConstructionModel,\
+    ImmediateExecutionModel, MaximumDrawdownPercentPerSecurity, MaximumUnrealizedProfitPercentPerSecurity
 
 
-class MeanReversionAlpha(AlphaModel):
+class BaseAlpha(AlphaModel):
     def __init__(self, *args, **kwargs):
         self.resolution = Resolution.Daily
         self.prediction_interval = Time.Multiply(Extensions.ToTimeSpan(Resolution.Daily), 5)
         self.symbols = {}
+        self.direction = InsightDirection.Up
         self.equity_risk_pc = kwargs['equity_risk_pc']
+        self.atr_lookback = kwargs['atr_lookback']
+
+    def OnSecuritiesChanged(self, algorithm, changes):
+        for added in changes.AddedSecurities:
+            self.symbols[added.Symbol] = SymbolData(
+                algorithm, added, self.resolution, adx_lookback=self.adx_lookback, 
+                atr_lookback=self.atr_lookback, rsi_lookback=self.rsi_lookback,
+                sma_lookback=self.sma_lookback,
+            )
+
+        for removed in changes.RemovedSecurities:
+            data = self.symbols.pop(removed.Symbol, None)
+            if data is not None:
+                algorithm.SubscriptionManager.RemoveConsolidator(removed.Symbol, data.Consolidator)
+    
+    def get_insight(self, algorithm, data, symbol):
+        confidence = self.get_confidence_for_symbol(algorithm, data, symbol)
+        return Insight(symbol, self.prediction_interval, InsightType.Price, self.direction, confidence, None)
+
+    def get_confidence_for_symbol(self, algorithm, data, symbol):
+        position_size = (algorithm.Portfolio.TotalPortfolioValue * self.equity_risk_pc) / self.symbols[symbol].atr.Current.Value
+        position_value = position_size * data[symbol].Close
+        return position_value / algorithm.Portfolio.TotalPortfolioValue
+
+
+class MeanReversionAlpha(AlphaModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.adx_lookback = kwargs['adx_lookback']
         self.atr_lookback = kwargs['atr_lookback']
         self.rsi_lookback = kwargs['rsi_lookback']
@@ -15,7 +47,8 @@ class MeanReversionAlpha(AlphaModel):
         self.direction = kwargs['direction']
     
     def Update(self, algorithm, data):
-        securities = self.get_long_securities(algorithm, data) if self.direction == InsightDirection.Up else self.get_short_securities(algorithm, data)
+        securities = self.get_long_securities(algorithm, data) if self.direction == InsightDirection.Up\
+                 else self.get_short_securities(algorithm, data)
         return [self.get_insight(algorithm, data, symbol) for symbol in securities]
     
     def get_long_securities(self, algorithm, data):
@@ -58,28 +91,14 @@ class MeanReversionAlpha(AlphaModel):
             key=lambda symbol: self.symbols[symbol].rsi.Current.Value,
             reverse=True, 
         )[:10]
-
-    def OnSecuritiesChanged(self, algorithm, changes):
-        for added in changes.AddedSecurities:
-            self.symbols[added.Symbol] = SymbolData(
-                algorithm, added, self.resolution, adx_lookback=self.adx_lookback, 
-                atr_lookback=self.atr_lookback, rsi_lookback=self.rsi_lookback,
-                sma_lookback=self.sma_lookback,
-            )
-
-        for removed in changes.RemovedSecurities:
-            data = self.symbols.pop(removed.Symbol, None)
-            if data is not None:
-                algorithm.SubscriptionManager.RemoveConsolidator(removed.Symbol, data.Consolidator)
     
-    def get_insight(self, algorithm, data, symbol):
-        confidence = self.get_confidence_for_symbol(algorithm, data, symbol)
-        return Insight(symbol, self.prediction_interval, InsightType.Price, self.direction, confidence, None)
 
-    def get_confidence_for_symbol(self, algorithm, data, symbol):
-        position_size = (algorithm.Portfolio.TotalPortfolioValue * self.equity_risk_pc) / self.symbols[symbol].atr.Current.Value
-        position_value = position_size * data[symbol].Close
-        return position_value / algorithm.Portfolio.TotalPortfolioValue
+class ROCRotationAlpha(AlphaModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.roc_lookback = kwargs['roc_lookback']
+        
+        self.direction = kwargs['direction']
 
 
 class SymbolData:
@@ -107,7 +126,7 @@ class LongShortMeanReversion(QCAlgorithm):
     def Initialize(self):
         self.SetStartDate(2020, 1, 1)
         self.SetCash(100000)
-        self.SetWarmUp(timedelta(200), Resolution.Daily)
+        self.SetWarmUp(datetime.timedelta(200), Resolution.Daily)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
         self.SetUniverseSelection(QC500UniverseSelectionModel())
