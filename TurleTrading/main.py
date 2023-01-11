@@ -5,14 +5,16 @@ from AlgorithmImports import Resolution, AverageTrueRange, SimpleMovingAverage, 
 
 class TurleTrading(QCAlgorithm):
     def Initialize(self):
-        self.SetStartDate(2008, 1, 1)
+        self.SetStartDate(2020, 1, 1)
         self.SetCash(100000)
-        self.SetWarmUp(datetime.timedelta(200), Resolution.Daily)
-        self.UniverseSettings.Resolution = Resolution.Daily
+        self.resolution = Resolution.Daily
+        self.SetWarmUp(datetime.timedelta(200), self.resolution)
+        self.UniverseSettings.Resolution = self.resolution
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
         self.SetUniverseSelection(QC500UniverseSelectionModel())
-        self.EQUITY_RISK_PC = 0.02
         self.SetExecution(ImmediateExecutionModel())
+        self.symbols = {}
+        self.EQUITY_RISK_PC = 0.02
         self.mfi_lookback = 21
         self.atr_lookback = 21
         self.sma_lookback = 150
@@ -36,8 +38,8 @@ class TurleTrading(QCAlgorithm):
     def OnData(self, data):
         securities = [
             symbol for symbol in self.symbols.keys() \
-            if data.ContainsKey(symbol) and data[symbol] is not None \
-            and self.symbols[symbol].sma.Current.Value < data[symbol].Close \
+            if data.Bars.ContainsKey(symbol) and data.Bars[symbol] is not None \
+            and self.symbols[symbol].sma.Current.Value < data.Bars[symbol].Close \
             and self.symbols[symbol].high.PeriodsSinceMaximum >= self.high_lookback -1 \
             and not self.ActiveSecurities[symbol].Invested
         ]
@@ -57,7 +59,7 @@ class TurleTrading(QCAlgorithm):
         for symbol in self.ActiveSecurities.Keys:
             if not self.ActiveSecurities[symbol].Invested:
                 continue
-            if not data.Bars.ContainsKey(symbol) or data.Bars[symbol] is None:
+            if (not data.Bars.ContainsKey(symbol)) or data.Bars[symbol] is None:
                 self.Liquidate(symbol)
             if data.Bars[symbol].Close < self.symbols[symbol].low.Current.Value:
                 self.Liquidate(symbol)
@@ -77,8 +79,8 @@ class SymbolData:
         self.mfi = MoneyFlowIndex(mfi_lookback)
         self.atr = AverageTrueRange(atr_lookback)
         self.sma = SimpleMovingAverage(sma_lookback)
-        self.high = algorithm.MAX(self.security.Symbol, high_lookback, Resolution.Daily, Field.High)
-        self.low = algorithm.MIN(self.security.Symbol, low_lookback, Resolution.Daily, Field.Low)
+        self.high = algorithm.MAX(self.security.Symbol, high_lookback, resolution, Field.High)
+        self.low = algorithm.MIN(self.security.Symbol, low_lookback, resolution, Field.Low)
         self.Consolidator = algorithm.ResolveConsolidator(security.Symbol, resolution)
         for indicator in (self.mfi, self.atr, self.sma):
             algorithm.RegisterIndicator(security.Symbol, indicator, self.Consolidator)
