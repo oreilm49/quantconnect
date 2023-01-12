@@ -1,6 +1,7 @@
 import datetime
 from AlgorithmImports import Resolution, AverageTrueRange, SimpleMovingAverage, MoneyFlowIndex,\
     BrokerageName, QCAlgorithm, QC500UniverseSelectionModel, ImmediateExecutionModel, Field
+from turtle_trading import TurtleTrading
 
 
 class MasterAlgo(QCAlgorithm):
@@ -17,6 +18,7 @@ class MasterAlgo(QCAlgorithm):
         self.EQUITY_RISK_PC = 0.02
         self.strategies = (
             # initialize strategy classes here
+            TurtleTrading(high_lookback=40),
         )
 
 
