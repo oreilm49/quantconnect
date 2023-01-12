@@ -5,7 +5,7 @@ from AlgorithmImports import Resolution, AverageTrueRange, SimpleMovingAverage, 
 
 class TurleTrading(QCAlgorithm):
     def Initialize(self):
-        self.SetStartDate(2020, 1, 1)
+        self.SetStartDate(2021, 1, 1)
         self.SetCash(100000)
         self.resolution = Resolution.Daily
         self.SetWarmUp(datetime.timedelta(200), self.resolution)
@@ -38,8 +38,7 @@ class TurleTrading(QCAlgorithm):
     def OnData(self, data):
         securities = [
             symbol for symbol in self.symbols.keys() \
-            if data.Bars.ContainsKey(symbol) and data.Bars[symbol] is not None \
-            and self.symbols[symbol].sma.Current.Value < data.Bars[symbol].Close \
+            if self.symbols[symbol].sma.Current.Value < self.ActiveSecurities[symbol].Close \
             and self.symbols[symbol].high.PeriodsSinceMaximum >= self.high_lookback -1 \
             and not self.ActiveSecurities[symbol].Invested
         ]
@@ -53,19 +52,20 @@ class TurleTrading(QCAlgorithm):
             position_value = position_size * self.ActiveSecurities[symbol].Price
             if position_value < self.Portfolio.Cash:
                 self.MarketOrder(symbol, position_size)
-        self.handle_exit_strategy(data)
+        self.handle_exit_strategy()
 
-    def handle_exit_strategy(self, data):
-        for symbol in self.ActiveSecurities.Keys:
+    def handle_exit_strategy(self):
+        for symbol in self.symbols.keys():
             if not self.ActiveSecurities[symbol].Invested:
                 continue
-            if (not data.Bars.ContainsKey(symbol)) or data.Bars[symbol] is None:
+            if symbol not in self.symbols:
                 self.Liquidate(symbol)
-            if data.Bars[symbol].Close < self.symbols[symbol].low.Current.Value:
+            close = self.ActiveSecurities[symbol].Close
+            if close < self.symbols[symbol].low.Current.Value:
                 self.Liquidate(symbol)
             if self.Portfolio[symbol].UnrealizedProfitPercent >= 0.20 or \
                 self.Portfolio[symbol].UnrealizedProfitPercent <= -0.08 or \
-                    data.Bars[symbol].Close < self.symbols[symbol].sma.Current.Value:
+                    close < self.symbols[symbol].sma.Current.Value:
                 self.Liquidate(symbol)
     
     def calculate_position_size(self, symbol):
