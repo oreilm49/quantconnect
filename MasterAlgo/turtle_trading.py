@@ -12,7 +12,7 @@ class TurtleTrading(BaseStrategy):
         securities = [
             symbol for symbol in algorithm.symbols.keys() \
             if algorithm.ActiveSecurities.ContainsKey(symbol) \
-            and data.ContainsKey(symbol) \
+            and data.ContainsKey(symbol) and data[symbol] is not None \
             and algorithm.symbols[symbol].sma.Current.Value < data[symbol].Close \
             and algorithm.symbols[symbol].high.Current.Value < data[symbol].Close \
             and algorithm.symbols[symbol].high.PeriodsSinceMaximum >= self.high_lookback -1 \
