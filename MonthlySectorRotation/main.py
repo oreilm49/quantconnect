@@ -156,6 +156,9 @@ class BuyTheWorstMeanReversion(BaseAlpha):
         self.month = algorithm.Time.month
         if not symbols:
             return []
+        risk_management = self.get_risk_management_insights(data)
+        if risk_management is not None:
+            return risk_management
         worst_performer = sorted(
             symbols, 
             key=lambda symbol: self.indicators_map[symbol].monthly_performance, 
