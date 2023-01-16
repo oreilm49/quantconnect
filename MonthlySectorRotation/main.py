@@ -60,6 +60,18 @@ class SharpeIndicators(ATRIndicators):
 class BaseAlpha(AlphaModel):
     def __init__(self, *args, **kwargs) -> None:
         self.equity_risk_pc = kwargs['equity_risk_pc']
+        self.spy = kwargs['spy']
+        self.spy_ma = SimpleMovingAverage(150)
+
+    def update_spy(self, data):
+        if not data.ContainsKey(self.spy) or data[self.spy] is None:
+            return
+        self.spy_ma.Update(data[self.spy].EndTime, data[self.spy].Close)
+
+    def get_risk_management_insights(self, data):
+        if data.ContainsKey(self.spy) and data[self.spy] is not None:
+            if data[self.spy].Close < self.spy_ma.Current.Value:
+                return [Insight(symbol, self.get_insight_period(data), InsightType.Price, InsightDirection.Flat, None, None) for symbol in self.symbols]
 
     def get_confidence_for_symbol(self, algorithm, data, symbol):
         position_size = (algorithm.Portfolio.TotalPortfolioValue * self.equity_risk_pc) / self.indicators_map[symbol].atr.Current.Value
@@ -92,14 +104,6 @@ class MonthlyRotation(BaseAlpha):
         self.num = kwargs['num']
         self.indicators_map = {}
         self.month = None
-        self.spy = kwargs['spy']
-        self.spy_ma = SimpleMovingAverage(150)
-
-    def update_spy(self, data):
-        if not data.ContainsKey(self.spy) or data[self.spy] is None:
-            return
-        self.spy_ma.Update(data[self.spy].EndTime, data[self.spy].Close)
-
 
     def Update(self, algorithm, data):
         symbols = []
@@ -116,15 +120,14 @@ class MonthlyRotation(BaseAlpha):
         self.month = algorithm.Time.month
         if not symbols:
             return []
+        risk_management = self.get_risk_management_insights(data)
+        if risk_management is not None:
+            return risk_management
         highest_sharpe = sorted(
             symbols, 
             key=lambda symbol: self.indicators_map[symbol].sharpe.Current.Value, 
             reverse=True,
         )[:self.num]
-        # risk management
-        if data.ContainsKey(self.spy) and data[self.spy] is not None:
-            if data[self.spy].Close < self.spy_ma.Current.Value:
-                return [Insight(symbol, self.get_insight_period(data), InsightType.Price, InsightDirection.Flat, None, None) for symbol in self.symbols]
         return [self.get_insight(algorithm, data, symbol) for symbol in highest_sharpe]
             
 
@@ -202,7 +205,7 @@ class MonthlySectorRotation(QCAlgorithm):
             CompositeAlphaModel(
                 MonthlyRotation(symbols=symbols, look_back=198, num=1, spy=spy, equity_risk_pc=self.equity_risk_pc),
                 MonthlyRotation(symbols=symbols, look_back=7, num=1, spy=spy, equity_risk_pc=self.equity_risk_pc),
-                BuyTheWorstMeanReversion(symbols=symbols, equity_risk_pc=self.equity_risk_pc),
+                BuyTheWorstMeanReversion(symbols=symbols, spy=spy, equity_risk_pc=self.equity_risk_pc),
             )
         )
         self.SetPortfolioConstruction(ConfidenceWeightedPortfolioConstructionModel(lambda time: None))
