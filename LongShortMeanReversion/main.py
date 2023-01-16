@@ -31,6 +31,7 @@ class MeanReversionAlpha(BaseAlpha):
         self.atr_lookback = kwargs['atr_lookback']
         self.rsi_lookback = kwargs['rsi_lookback']
         self.sma_lookback = kwargs['sma_lookback']
+        self.spy = kwargs['spy']
         self.direction = kwargs['direction']
     
     def Update(self, algorithm, data):
@@ -68,6 +69,8 @@ class MeanReversionAlpha(BaseAlpha):
         #4. rank by most overbought RSI
         #5. filter out 10 stocks
         """
+        if not self.get_spy_downtrending(data):
+            return []
         securities = [symbol for symbol in self.symbols.keys() \
                 if data.ContainsKey(symbol) and data[symbol] is not None \
                     and self.symbols[symbol].adx.Current.Value > 50 \
@@ -91,6 +94,12 @@ class MeanReversionAlpha(BaseAlpha):
             data = self.symbols.pop(removed.Symbol, None)
             if data is not None:
                 algorithm.SubscriptionManager.RemoveConsolidator(removed.Symbol, data.Consolidator)
+
+    def get_spy_downtrending(self, data):
+        symbol = self.spy
+        if data.ContainsKey(symbol) and data[symbol] is not None:
+            return data[symbol].Close < self.symbols[symbol].sma.Current.Value
+        return False
 
 class MeanReversionData:
     def __init__(self, algorithm, security, resolution, adx_lookback = 7, atr_lookback = 10, rsi_lookback = 3, sma_lookback = 150):
@@ -173,15 +182,16 @@ class LongShortMeanReversion(QCAlgorithm):
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
         self.SetUniverseSelection(QC500UniverseSelectionModel())
         self.EQUITY_RISK_PC = 0.01
+        self.spy = self.AddEquity("SPY", Resolution.Daily).Symbol
         self.SetAlpha(
             CompositeAlphaModel(
-                MeanReversionAlpha(direction=InsightDirection.Up, equity_risk_pc=self.EQUITY_RISK_PC, adx_lookback=7, atr_lookback=10, rsi_lookback=3, sma_lookback=150),
-                MeanReversionAlpha(direction=InsightDirection.Down, equity_risk_pc=self.EQUITY_RISK_PC, adx_lookback=7, atr_lookback=10, rsi_lookback=3, sma_lookback=150),
-                MeanReversionSelloffAlpha(equity_risk_pc=self.EQUITY_RISK_PC, atr_lookback=21, roc_lookback=3, sma_lookback=150)
+                # MeanReversionAlpha(direction=InsightDirection.Up, equity_risk_pc=self.EQUITY_RISK_PC, adx_lookback=7, atr_lookback=10, rsi_lookback=3, sma_lookback=150),
+                MeanReversionAlpha(direction=InsightDirection.Down, equity_risk_pc=self.EQUITY_RISK_PC, adx_lookback=7, atr_lookback=10, rsi_lookback=3, sma_lookback=50, spy=self.spy),
+                # MeanReversionSelloffAlpha(equity_risk_pc=self.EQUITY_RISK_PC, atr_lookback=21, roc_lookback=3, sma_lookback=150)
             )
         )
         # rebalance every Sunday & Wednesday
-        self.SetPortfolioConstruction(ConfidenceWeightedPortfolioConstructionModel(self.DateRules.Every([0, 3])))
+        self.SetPortfolioConstruction(ConfidenceWeightedPortfolioConstructionModel(self.DateRules.EveryDay("SPY")))
         self.SetExecution(ImmediateExecutionModel())
         self.Settings.RebalancePortfolioOnInsightChanges = False
         self.Settings.RebalancePortfolioOnSecurityChanges = False
