@@ -1,6 +1,6 @@
 import datetime
-from AlgorithmImports import Resolution, AverageTrueRange, SimpleMovingAverage, MoneyFlowIndex,\
-    BrokerageName, QCAlgorithm, QC500UniverseSelectionModel, ImmediateExecutionModel, Field
+from AlgorithmImports import Resolution, BrokerageName, QCAlgorithm, QC500UniverseSelectionModel, \
+        ImmediateExecutionModel
 from turtle_trading import TurtleTrading
 
 
