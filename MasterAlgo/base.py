@@ -1,7 +1,7 @@
 from AlgorithmImports import Resolution
 
 class BaseStrategy:
-    def __init__(self, equity_risk_pc = 0.02) -> None:
+    def __init__(self, equity_risk_pc = 0.02, **kwargs) -> None:
         self.equity_risk_pc = equity_risk_pc
 
     def calculate_position_size(self, algorithm, symbol):
@@ -18,3 +18,6 @@ class BaseStrategy:
         if not self.rebalance_due(algorithm):
             return
         self.handle_on_data(algorithm, data)
+
+    def get_indicator_configs(self):
+        return []
