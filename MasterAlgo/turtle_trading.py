@@ -19,7 +19,7 @@ class TurtleTrading(BaseStrategy):
             and not algorithm.ActiveSecurities[symbol].Invested
         ]
         securities = sorted(
-            securities, 
+            securities,
             key=lambda symbol: algorithm.symbols[symbol].mfi.Current.Value,
             reverse=True,
         )[:10]
