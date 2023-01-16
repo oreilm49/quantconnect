@@ -40,6 +40,8 @@ class MasterAlgo(QCAlgorithm):
                 del data
 
     def OnData(self, data):
+        if self.IsWarmingUp:
+            return
         for strategy in self.strategies:
             strategy.OnData(self, data)
 
