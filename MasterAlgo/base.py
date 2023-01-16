@@ -21,3 +21,11 @@ class BaseStrategy:
 
     def get_indicator_configs(self):
         return []
+
+    def get_manual_indicator_configs(self):
+        return [indicator for indicator in self.get_indicator_configs() if indicator.get('manual')]
+    
+    def handle_manual_indicators(self, algorithm, data):
+        manual_indicators = self.get_manual_indicator_configs()
+        if manual_indicators:
+            raise NotImplementedError("This class contains manual indicators but doesn't warm them up")

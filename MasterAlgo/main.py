@@ -1,6 +1,6 @@
 import datetime
 from AlgorithmImports import Resolution, BrokerageName, QCAlgorithm, QC500UniverseSelectionModel, \
-        ImmediateExecutionModel
+        ImmediateExecutionModel, RollingWindow
 from turtle_trading import TurtleTrading
 
 
@@ -40,9 +40,10 @@ class MasterAlgo(QCAlgorithm):
                 del data
 
     def OnData(self, data):
-        if self.IsWarmingUp:
-            return
         for strategy in self.strategies:
+            strategy.handle_manual_indicators(self, data)
+            if self.IsWarmingUp:
+                continue
             strategy.OnData(self, data)
 
 
@@ -52,8 +53,14 @@ class SymbolData:
         self.Consolidator = algorithm.ResolveConsolidator(security.Symbol, resolution)
         self.positions = {}
         for config in indicator_configs:
-            setattr(self, config['name'], config['class'](*config['args']))
+            if config['class'] == RollingWindow:
+                indicator_class = config['class'][config['window_type']](*config['args'])
+            else:
+                indicator_class = config['class'](*config['args'])
+            setattr(self, config['name'], indicator_class)
             indicator = getattr(self, config['name'])
+            if config.get('manual'):
+                continue
             algorithm.RegisterIndicator(security.Symbol, indicator, self.Consolidator)
             algorithm.WarmUpIndicator(security.Symbol, indicator, resolution)
 
