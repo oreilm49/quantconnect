@@ -1,7 +1,8 @@
 import datetime
 from AlgorithmImports import RateOfChangePercent, SharpeRatio, AverageTrueRange, AlphaModel, Extensions, Resolution,\
     Time, InsightDirection, InsightType, Insight, SimpleMovingAverage, RollingWindow, QCAlgorithm, BrokerageName, \
-    CompositeAlphaModel, ImmediateExecutionModel, NullRiskManagementModel, ConfidenceWeightedPortfolioConstructionModel
+    CompositeAlphaModel, ImmediateExecutionModel, NullRiskManagementModel, ConfidenceWeightedPortfolioConstructionModel, \
+    Expiry
 
 
 class ATRIndicators:
@@ -66,10 +67,18 @@ class BaseAlpha(AlphaModel):
         algorithm.Debug(f"CONFIDENCE: {algorithm.Time}  {str(symbol)}  {self.indicators_map[symbol]}  {algorithm.Portfolio.TotalPortfolioValue}")
         return position_value / algorithm.Portfolio.TotalPortfolioValue
     
+    def get_insight_period(self, data):
+        """
+        Implementing monthly rebalancing logic defined in this forum post:
+        https://www.quantconnect.com/forum/discussion/10677/algorithm-framework-questions/p1
+        """
+        return Expiry.EndOfMonth(data.Time) - datetime.timedelta(seconds=1)
+    
     def get_insight(self, algorithm, data, symbol, direction = InsightDirection.Up):
         confidence = self.get_confidence_for_symbol(algorithm, data, symbol)
-        # Insight(symbol, period, type, direction, magnitude=None, confidence=None, sourceModel=None, weight=None)
-        return Insight(symbol, self.prediction_interval, InsightType.Price, direction, magnitude=None, confidence=confidence, sourceModel=None, weight=None)
+        period = self.get_insight_period(data)
+        # Insight.Price(symbol, period, direction, magnitude=None, confidence=None, sourceModel=None, weight=None)
+        return Insight.Price(symbol, period, direction, None, confidence)
 
 
 class MonthlyRotation(BaseAlpha):
@@ -162,8 +171,8 @@ class MonthlySectorRotation(QCAlgorithm):
         self.SetWarmUp(datetime.timedelta(200), Resolution.Daily)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
-        self.Settings.RebalancePortfolioOnInsightChanges = False
-        self.Settings.RebalancePortfolioOnSecurityChanges = False
+        # self.Settings.RebalancePortfolioOnInsightChanges = True
+        # self.Settings.RebalancePortfolioOnSecurityChanges = False
         self.equity_risk_pc = 0.02
         tickers = [
             "GXLE",
@@ -198,6 +207,6 @@ class MonthlySectorRotation(QCAlgorithm):
                 BuyTheWorstMeanReversion(symbols=symbols, equity_risk_pc=self.equity_risk_pc),
             )
         )
-        self.SetPortfolioConstruction(ConfidenceWeightedPortfolioConstructionModel(self.DateRules.MonthStart()))
+        self.SetPortfolioConstruction(ConfidenceWeightedPortfolioConstructionModel(lambda time: None))
         self.SetExecution(ImmediateExecutionModel())
         self.SetRiskManagement(NullRiskManagementModel())
