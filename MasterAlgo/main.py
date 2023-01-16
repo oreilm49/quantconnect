@@ -20,12 +20,15 @@ class MasterAlgo(QCAlgorithm):
             # initialize strategy classes here
             TurtleTrading(high_lookback=40),
         )
+        self.indicator_configs = []
+        for strategy in self.strategies:
+            self.indicator_configs += strategy.get_indicator_configs()
 
 
     def OnSecuritiesChanged(self, changes):
         for added in changes.AddedSecurities:
             self.symbols[added.Symbol] = SymbolData(
-                self, added, self.resolution,
+                self, added, self.resolution, self.indicator_configs
             )
 
         for removed in changes.RemovedSecurities:
@@ -39,13 +42,13 @@ class MasterAlgo(QCAlgorithm):
 
 
 class SymbolData:
-    def __init__(self, algorithm, security, resolution):
+    def __init__(self, algorithm, security, resolution, indicator_configs):
         self.security = security
-        self.atr = AverageTrueRange(atr_lookback)
-        self.sma = SimpleMovingAverage(sma_lookback)
         self.Consolidator = algorithm.ResolveConsolidator(security.Symbol, resolution)
         self.positions = {}
-        for indicator in (self.mfi, self.atr, self.sma):
+        for config in indicator_configs:
+            setattr(self, config['name'], config['class'](*config['args']))
+            indicator = getattr(self, config['name'])
             algorithm.RegisterIndicator(security.Symbol, indicator, self.Consolidator)
             algorithm.WarmUpIndicator(security.Symbol, indicator, resolution)
 
