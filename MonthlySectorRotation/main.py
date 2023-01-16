@@ -116,7 +116,7 @@ class MonthlyRotation(BaseAlpha):
         # risk management
         if data.ContainsKey(self.spy) and data[self.spy] is not None:
             if data[self.spy].Close < self.spy_ma.Current.Value:
-                return [Insight(symbol, self.prediction_interval, InsightType.Price, InsightDirection.Flat, None, None) for symbol in algorithm.ActiveSecurities.Keys]
+                return [Insight(symbol, self.prediction_interval, InsightType.Price, InsightDirection.Flat, None, None) for symbol in self.symbols]
         return [self.get_insight(algorithm, data, symbol) for symbol in highest_sharpe]
             
 
