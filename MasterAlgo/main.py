@@ -34,7 +34,10 @@ class MasterAlgo(QCAlgorithm):
         for removed in changes.RemovedSecurities:
             data = self.symbols.pop(removed.Symbol, None)
             if data is not None:
-                self.SubscriptionManager.RemoveConsolidator(removed.Symbol, data.Consolidator)
+                self.SubscriptionManager.RemoveConsolidator(
+                    removed.Symbol, data.Consolidator
+                )
+                del data
 
     def OnData(self, data):
         for strategy in self.strategies:
