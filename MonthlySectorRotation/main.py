@@ -92,7 +92,6 @@ class MonthlyRotation(BaseAlpha):
         self.num = kwargs['num']
         self.indicators_map = {}
         self.month = None
-        self.prediction_interval = Time.Multiply(Extensions.ToTimeSpan(Resolution.Daily), 5) ## Arbitrary
         self.spy = kwargs['spy']
         self.spy_ma = SimpleMovingAverage(150)
 
@@ -138,7 +137,6 @@ class BuyTheWorstMeanReversion(BaseAlpha):
         self.symbols = kwargs['symbols']
         self.indicators_map = {}
         self.month = None
-        self.prediction_interval = Time.Multiply(Extensions.ToTimeSpan(Resolution.Daily), 5) ## Arbitrary
 
     def Update(self, algorithm, data):
         symbols = []
