@@ -52,6 +52,7 @@ class SymbolData:
         self.security = security
         self.Consolidator = algorithm.ResolveConsolidator(security.Symbol, resolution)
         self.positions = {}
+        self.indicators = []
         for config in indicator_configs:
             if config['class'] == RollingWindow:
                 indicator_class = config['class'][config['window_type']](*config['args'])
@@ -59,6 +60,7 @@ class SymbolData:
                 indicator_class = config['class'](*config['args'])
             setattr(self, config['name'], indicator_class)
             indicator = getattr(self, config['name'])
+            self.indicators.append(indicator)
             if config.get('manual'):
                 continue
             algorithm.RegisterIndicator(security.Symbol, indicator, self.Consolidator)
@@ -81,4 +83,8 @@ class SymbolData:
 
     def get_position(self, strategy_name):
         return self.positions[strategy_name]
+    
+    @property
+    def ready(self) -> bool:
+        return all([indicator.ready for indicator in self.indicators])
     
