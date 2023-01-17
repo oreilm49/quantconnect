@@ -1,7 +1,7 @@
 from AlgorithmImports import Resolution
 
 class BaseStrategy:
-    def __init__(self, equity_risk_pc = 0.02, **kwargs) -> None:
+    def __init__(self, equity_risk_pc = 0.01, **kwargs) -> None:
         self.equity_risk_pc = equity_risk_pc
 
     def calculate_position_size(self, algorithm, symbol):
