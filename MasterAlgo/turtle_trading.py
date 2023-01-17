@@ -26,6 +26,8 @@ class TurtleTrading(BaseStrategy):
         )[:10]
         for symbol in securities:
             position_size = self.calculate_position_size(algorithm, symbol)
+            if position_size <= 0:
+                continue
             position_value = position_size * algorithm.ActiveSecurities[symbol].Price
             if position_value < algorithm.Portfolio.Cash:
                 algorithm.MarketOrder(symbol, position_size)
