@@ -86,5 +86,5 @@ class SymbolData:
     
     @property
     def ready(self) -> bool:
-        return all([indicator.ready for indicator in self.indicators])
+        return all([indicator.IsReady for indicator in self.indicators])
     
