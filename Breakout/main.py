@@ -229,7 +229,8 @@ class Breakout(QCAlgorithm):
         return True
     
     def update_screened_symbols(self):
+        if self.IsWarmingUp:
+            return
         if not self.screened_symbols or self.LiveMode:
             self.screened_symbols = self.Download(self.SYMBOLS_URL).split("\r\n")
-            self.Debug(",".join(self.screened_symbols))
-            
+            self.live_log(f"symbols updated: {','.join(self.screened_symbols)}")
