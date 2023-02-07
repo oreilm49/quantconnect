@@ -108,6 +108,9 @@ class Breakout(QCAlgorithm):
                 self.Liquidate(symbol)
             if self.symbol_map[symbol].uptrending:
                 symbols.append(symbol)
+        if self.IsWarmingUp:
+            return
+        self.live_log("processing on data")
         # sort stocks by lowest volatility
         for symbol in sorted(symbols, key=lambda symbol: self.symbol_map[symbol].atrp(data.Bars[symbol].Close)):
             if self.hvc(symbol):
