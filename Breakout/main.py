@@ -1,5 +1,5 @@
 from AlgorithmImports import SimpleMovingAverage, AverageTrueRange, RollingWindow, TradeBar,\
-    QCAlgorithm, Resolution, BrokerageName, QC500UniverseSelectionModel, Maximum
+    QCAlgorithm, Resolution, BrokerageName, QC500UniverseSelectionModel, Maximum, Market
 from datetime import timedelta
 
 
@@ -73,7 +73,7 @@ class Breakout(QCAlgorithm):
         self.UniverseSettings.Resolution = Resolution.Daily
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
         self.EQUITY_RISK_PC = 0.01
-        self.SetUniverseSelection(QC500UniverseSelectionModel())
+        self.AddUniverse(self.coarse_selection)
         self.symbol_map = {}
         self.screened_symbols = []
         self.AddEquity("SPY", Resolution.Daily)
@@ -88,6 +88,9 @@ class Breakout(QCAlgorithm):
     def live_log(self, msg):
         if self.LiveMode:
             self.Log(msg)
+
+    def coarse_selection(self, coarse):
+        return [stock.Symbol for stock in coarse if stock.Price >= 10 and stock.Market == Market.USA and stock.HasFundamentalData]
 
     def OnData(self, data):
         symbols = []
