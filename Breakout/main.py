@@ -235,3 +235,7 @@ class Breakout(QCAlgorithm):
         if not self.screened_symbols or self.LiveMode:
             self.screened_symbols = self.Download(self.SYMBOLS_URL).split("\r\n")
             self.live_log(f"symbols updated: {','.join(self.screened_symbols)}")
+            for symbol in self.symbol_map.keys():
+                if symbol.Value not in self.screened_symbols:
+                    self.live_log(f"removed from indicators: {symbol.Value}")
+                    del self.symbol_map[symbol]
