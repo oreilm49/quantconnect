@@ -78,11 +78,6 @@ class Breakout(QCAlgorithm):
         self.screened_symbols = []
         self.AddEquity("SPY", Resolution.Daily)
         self.SYMBOLS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRajMcf0SW61y_kCO9s1mhvCxGlGq9PgSRyQyNyQCx9ALfOF800f22Z0OKkL_-PU_jBWowdOBkM6FtM/pub?gid=0&single=true&output=csv'
-        self.Schedule.On(
-            self.DateRules.EveryDay("SPY"),
-            self.TimeRules.AfterMarketOpen("SPY", -10),
-            self.update_screened_symbols
-        )
         # self.screened_symbols = ["ASAN", "TSLA", "RBLX", "DOCN", "FTNT", "DDOG", "NET", "BILL", "NVDA", "AMBA", "INMD", "AMEH", "AEHR", "SITM", "CROX"]
     
     def live_log(self, msg):
@@ -90,7 +85,8 @@ class Breakout(QCAlgorithm):
             self.Log(msg)
 
     def coarse_selection(self, coarse):
-        return [stock.Symbol for stock in coarse if stock.Price >= 10 and stock.Market == Market.USA and stock.HasFundamentalData]
+        self.update_screened_symbols()
+        return [stock.Symbol for stock in coarse if stock.Symbol.Value in self.screened_symbols]
 
     def OnData(self, data):
         symbols = []
