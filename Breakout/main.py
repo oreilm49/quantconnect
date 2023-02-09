@@ -69,7 +69,6 @@ class Breakout(QCAlgorithm):
         self.SetStartDate(2021, 1, 1)
         self.SetEndDate(2021, 11, 1)
         self.SetCash(10000)
-        self.SetWarmUp(timedelta(200), Resolution.Daily)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
         self.EQUITY_RISK_PC = 0.01
