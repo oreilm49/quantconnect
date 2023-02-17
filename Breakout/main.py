@@ -1,5 +1,5 @@
 from AlgorithmImports import SimpleMovingAverage, AverageTrueRange, RollingWindow, TradeBar,\
-    QCAlgorithm, Resolution, BrokerageName, QC500UniverseSelectionModel, Maximum, Market
+    QCAlgorithm, Resolution, BrokerageName, Maximum
 from datetime import timedelta
 
 
@@ -66,22 +66,25 @@ class SymbolIndicators:
 
 class Breakout(QCAlgorithm):
     def Initialize(self):
-        self.SetStartDate(2021, 1, 1)
-        self.SetEndDate(2021, 11, 1)
+        self.SetStartDate(2023, 2, 1)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
-        self.EQUITY_RISK_PC = 0.01
+        self.EQUITY_RISK_PC = 0.0075
         self.AddUniverse(self.coarse_selection)
         self.symbol_map = {}
         self.screened_symbols = []
         self.AddEquity("SPY", Resolution.Daily)
         self.SYMBOLS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRajMcf0SW61y_kCO9s1mhvCxGlGq9PgSRyQyNyQCx9ALfOF800f22Z0OKkL_-PU_jBWowdOBkM6FtM/pub?gid=0&single=true&output=csv'
         # self.screened_symbols = ["ASAN", "TSLA", "RBLX", "DOCN", "FTNT", "DDOG", "NET", "BILL", "NVDA", "AMBA", "INMD", "AMEH", "AEHR", "SITM", "CROX"]
-    
+        self.SL_RISK_PC = -0.05
+        self.TP_TARGET = 0.20
+
     def live_log(self, msg):
         if self.LiveMode:
             self.Log(msg)
+        else:
+            self.Debug(msg)
 
     def coarse_selection(self, coarse):
         self.update_screened_symbols()
@@ -121,17 +124,27 @@ class Breakout(QCAlgorithm):
                 self.buy(symbol, order_tag=POCKET_PIVOT)
     
     def buy(self, symbol, order_tag=None):
-        position_size = round((self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / self.symbol_map[symbol].atr.Current.Value)
+        position_size = self.get_position_size(symbol)
         position_value = position_size * self.ActiveSecurities[symbol].Price
-        self.live_log(f"buying {symbol.Value}")
+        self.live_log(f"buying {symbol.Value} {position_value}: {order_tag or 'no tag'}")
         if position_value < self.Portfolio.Cash:
             self.MarketOrder(symbol, position_size, tag=order_tag)
         else:
             self.live_log(f"insufficient cash ({self.Portfolio.Cash}) to purchase {symbol.Value}")
+
+    def get_position_size(self, symbol):
+        """
+        Gets the lowest risk position size
+        volatility_size = ($total equity * portfolio risk %) / ATR(21)
+        risk_size = ($total equity * portfolio risk %) / $value of risk on trade
+        """
+        volatility_size = (self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / self.symbol_map[symbol].atr.Current.Value
+        risk_size = (self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / (self.ActiveSecurities[symbol].Price * (self.SL_RISK_PC * -1))
+        return round(min(volatility_size, risk_size))
     
     def sell_signal(self, symbol, slice):
         profit = self.Portfolio[symbol].UnrealizedProfitPercent
-        return profit >= 0.20 or profit <= -0.05
+        return profit >= self.TP_TARGET or profit <= self.SL_RISK_PC
     
     def hvc(self, symbol):
         """
