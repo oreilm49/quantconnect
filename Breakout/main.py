@@ -63,6 +63,14 @@ class SymbolIndicators:
     def uptrending(self):
         return self.sma.Current.Value > self.sma_200.Current.Value
 
+    @property
+    def high_3_weeks_ago(self) -> bool:
+        return self.max_price.PeriodsSinceMaximum > 5 * 3
+
+    @property
+    def high_7_weeks_ago(self) -> bool:
+        return self.max_price.PeriodsSinceMaximum > 5 * 7
+
 
 class Breakout(QCAlgorithm):
     def Initialize(self):
@@ -107,7 +115,7 @@ class Breakout(QCAlgorithm):
                 continue
             if self.sell_signal(symbol, data):
                 self.Liquidate(symbol)
-            if self.symbol_map[symbol].uptrending:
+            if self.symbol_map[symbol].uptrending and not self.ActiveSecurities[symbol].Invested:
                 symbols.append(symbol)
         if self.IsWarmingUp:
             return
@@ -172,6 +180,9 @@ class Breakout(QCAlgorithm):
             return False
         if not ((indicators.max_price.Current.Value - trade_bar_lts.High) / indicators.max_price.Current.Value) <= 0.2:
             return False
+        # must occur within a base
+        if not indicators.high_7_weeks_ago:
+            return False
         return True
     
     def inside_day(self, symbol):
@@ -197,6 +208,9 @@ class Breakout(QCAlgorithm):
         # ensure positive close
         if trade_bar_lts.Open > trade_bar_lts.Close:
             return False
+        # must occur within a base
+        if not indicators.high_7_weeks_ago:
+            return False
         return True
     
     def kma_pullback(self, symbol):
@@ -212,7 +226,7 @@ class Breakout(QCAlgorithm):
         trade_bar_lts = indicators.trade_bar_window[0]
         trade_bar_prev = indicators.trade_bar_window[1]
         # recent new high (within the three weeks)
-        if indicators.max_price.PeriodsSinceMaximum > 15:
+        if indicators.high_3_weeks_ago:
             return False
         # touched the 50 day
         if not (trade_bar_prev.Low <= indicators.sma_window[1]):
@@ -239,6 +253,9 @@ class Breakout(QCAlgorithm):
             return False
         # low of the day is greater than SMA
         if trade_bar_lts.Low > indicators.sma_window[0]:
+            return False
+        # must occur within a base
+        if not indicators.high_7_weeks_ago:
             return False
         return True
     
