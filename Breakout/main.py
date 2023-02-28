@@ -1,6 +1,6 @@
 from AlgorithmImports import SimpleMovingAverage, AverageTrueRange, RollingWindow, TradeBar,\
-    QCAlgorithm, Resolution, BrokerageName, Maximum
-from datetime import timedelta
+    QCAlgorithm, Resolution, BrokerageName, Maximum, OrderProperties, TimeInForce
+from datetime import timedelta, datetime
 
 
 HVC = 'high volume close'
@@ -75,6 +75,8 @@ class SymbolIndicators:
 class Breakout(QCAlgorithm):
     def Initialize(self):
         self.SetStartDate(2023, 2, 1)
+        # self.SetStartDate(2021, 1, 1)
+        # self.SetEndDate(2021, 12, 31)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
@@ -124,21 +126,41 @@ class Breakout(QCAlgorithm):
         for symbol in sorted(symbols, key=lambda symbol: self.symbol_map[symbol].atrp(data.Bars[symbol].Close)):
             if self.hvc(symbol):
                 self.buy(symbol, order_tag=HVC)
-            if self.inside_day(symbol):
-                self.buy(symbol, order_tag=INSIDE_DAY)
+            if limit_price := self.inside_day(symbol):
+                self.buy(symbol, order_tag=INSIDE_DAY, order_properties=self.good_for_a_day(), limit_price=limit_price)
             if self.kma_pullback(symbol):
                 self.buy(symbol, order_tag=KMA_PULLBACK)
             if self.pocket_pivot(symbol):
                 self.buy(symbol, order_tag=POCKET_PIVOT)
     
-    def buy(self, symbol, order_tag=None):
+    def buy(self, symbol, order_tag=None, order_properties=None, limit_price=None):
         position_size = self.get_position_size(symbol)
         position_value = position_size * self.ActiveSecurities[symbol].Price
-        self.live_log(f"buying {symbol.Value} {position_value}: {order_tag or 'no tag'}")
         if position_value < self.Portfolio.Cash:
-            self.MarketOrder(symbol, position_size, tag=order_tag)
+            if limit_price:
+                self.live_log(f"Limit order {symbol.Value} {position_value}: {order_tag or 'no tag'}: {str(limit_price)}")
+                self.LimitOrder(symbol, position_size, limit_price, order_tag, order_properties)
+            else:
+                self.live_log(f"Market order {symbol.Value} {position_value}: {order_tag or 'no tag'}")
+                self.MarketOrder(symbol, position_size, tag=order_tag)
         else:
             self.live_log(f"insufficient cash ({self.Portfolio.Cash}) to purchase {symbol.Value}")
+
+    def good_for_a_day(self):
+        """
+        Gets order properties that will expire an order after one day.
+        Handles the edge case where orders raised during the weekend should last for one trading day
+        """
+        order_properties = OrderProperties()
+        day_delta = {
+            5: 2,
+            6: 1,
+        }
+        day_after_tomorrow = self.Time + timedelta(days=2 + day_delta.get(self.Time.isoweekday(), 0))
+        order_properties.TimeInForce = TimeInForce.GoodTilDate(datetime(
+            day_after_tomorrow.year, day_after_tomorrow.month, day_after_tomorrow.day, 0, 0, 1
+        ))
+        return order_properties
 
     def get_position_size(self, symbol):
         """
@@ -211,7 +233,7 @@ class Breakout(QCAlgorithm):
         # must occur within a base
         if not indicators.high_7_weeks_ago:
             return False
-        return True
+        return trade_bar_prev.High
     
     def kma_pullback(self, symbol):
         """
@@ -265,7 +287,7 @@ class Breakout(QCAlgorithm):
         if not self.screened_symbols or self.LiveMode:
             self.screened_symbols = self.Download(self.SYMBOLS_URL).split("\r\n")
             self.live_log(f"symbols updated: {','.join(self.screened_symbols)}")
-            for symbol in self.symbol_map.keys():
+            for symbol in list(self.symbol_map.keys()):
                 if symbol.Value not in self.screened_symbols:
                     self.live_log(f"removed from indicators: {symbol.Value}")
                     del self.symbol_map[symbol]
