@@ -126,20 +126,20 @@ class Breakout(QCAlgorithm):
         for symbol in sorted(symbols, key=lambda symbol: self.symbol_map[symbol].atrp(data.Bars[symbol].Close)):
             if self.hvc(symbol):
                 self.buy(symbol, order_tag=HVC)
-            if limit_price := self.inside_day(symbol):
-                self.buy(symbol, order_tag=INSIDE_DAY, order_properties=self.good_for_a_day(), limit_price=limit_price)
+            if price := self.inside_day(symbol):
+                self.buy(symbol, order_tag=INSIDE_DAY, order_properties=self.good_for_a_day(), price=price)
             if self.kma_pullback(symbol):
                 self.buy(symbol, order_tag=KMA_PULLBACK)
             if self.pocket_pivot(symbol):
                 self.buy(symbol, order_tag=POCKET_PIVOT)
     
-    def buy(self, symbol, order_tag=None, order_properties=None, limit_price=None):
+    def buy(self, symbol, order_tag=None, order_properties=None, price=None):
         position_size = self.get_position_size(symbol)
         position_value = position_size * self.ActiveSecurities[symbol].Price
         if position_value < self.Portfolio.Cash:
-            if limit_price:
-                self.live_log(f"Limit order {symbol.Value} {position_value}: {order_tag or 'no tag'}: {str(limit_price)}")
-                self.LimitOrder(symbol, position_size, limit_price, order_tag, order_properties)
+            if price:
+                self.live_log(f"Limit order {symbol.Value} {position_value}: {order_tag or 'no tag'}: {str(price)}")
+                self.StopMarketOrder(symbol, position_size, price, order_tag, order_properties)
             else:
                 self.live_log(f"Market order {symbol.Value} {position_value}: {order_tag or 'no tag'}")
                 self.MarketOrder(symbol, position_size, tag=order_tag)
