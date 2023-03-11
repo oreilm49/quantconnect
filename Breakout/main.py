@@ -1,3 +1,4 @@
+from typing import Optional
 from AlgorithmImports import SimpleMovingAverage, AverageTrueRange, RollingWindow, TradeBar,\
     QCAlgorithm, Resolution, BrokerageName, Maximum, OrderProperties, TimeInForce
 from datetime import timedelta, datetime
@@ -7,6 +8,7 @@ HVC = 'high volume close'
 INSIDE_DAY = 'inside day'
 KMA_PULLBACK = 'key moving average pullback'
 POCKET_PIVOT = 'pocket pivot'
+BREAKOUT = 'breakout'
 
 
 class SymbolIndicators:
@@ -19,6 +21,7 @@ class SymbolIndicators:
         self.max_volume = Maximum(200)
         self.max_price = Maximum(200)
         self.sma_window = RollingWindow[float](2)
+        self.breakout_window = RollingWindow[float](1)
 
         for data in history.itertuples():
             trade_bar = TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
@@ -33,6 +36,10 @@ class SymbolIndicators:
         self.max_volume.Update(trade_bar.EndTime, trade_bar.Volume)
         self.max_price.Update(trade_bar.EndTime, trade_bar.High)
         self.sma_window.Add(self.sma.Current.Value)
+        if self.breakout_ready:
+            level = self.is_breakout
+            if level:
+                self.breakout_window.Add(level)
     
     @property
     def ready(self):
@@ -45,6 +52,13 @@ class SymbolIndicators:
             self.max_volume.IsReady,
             self.max_price.IsReady,
             self.sma_window.IsReady,
+        ))
+        
+    @property
+    def breakout_ready(self):
+        return all((
+            self.sma_volume.IsReady,
+            self.trade_bar_window.IsReady,
         ))
     
     @property
@@ -71,7 +85,7 @@ class SymbolIndicators:
     def high_7_weeks_ago(self) -> bool:
         return self.max_price.PeriodsSinceMaximum > 5 * 7
     
-    def get_resistance_levels(self, range_filter: float = 0.005, peak_range: int = 3) -> set[float]:
+    def get_resistance_levels(self, range_filter: float = 0.005, peak_range: int = 3) -> list[float]:
         """
         Finds major resistance levels for data in self.trade_bar_window.
 
@@ -80,21 +94,49 @@ class SymbolIndicators:
         :return: set of price resistance levels.
         """
         series = self.trade_bar_window
-        peaks = set()
+        peaks = []
         for i in range(peak_range, series.Size - peak_range):
             greater_than_prior_prices = series[i].High > series[i - peak_range].High
             greater_than_future_prices = series[i].High > series[i + peak_range].High
             if greater_than_prior_prices and greater_than_future_prices:
-                peaks.add(series[i].High)
-        levels = set()
-        for price in peaks:
-            range_filter = price * range_filter
-            lower_range = price - range_filter
-            upper_range = price + range_filter
-            common_levels = [peak for peak in peaks if peak > lower_range and peak < upper_range]
-            if len(common_levels) > 1:
-                levels.add(max(common_levels))  
+                peaks.append(series[i].High)
+        levels = []
+        peaks = sorted(peaks)
+        for i, curr_peak in enumerate(peaks):
+            level = None
+            if i == 0:
+                continue
+            prev_peak_upper_range = peaks[i - 1] + (peaks[i - 1] * range_filter)
+            if curr_peak < prev_peak_upper_range:
+                level = curr_peak
+            if level and levels:
+                prev_level_upper_range = levels[-1] + (levels[-1] * range_filter)
+                if level < prev_level_upper_range:
+                    levels.pop()
+            if level:
+                levels.append(level)
         return levels
+    
+    @property
+    def is_breakout(self) -> Optional[float]:
+        """
+        Determines if the current candle is a breakout.
+        If so, returns the breakout price level.
+        """
+        trade_bar_lts = self.trade_bar_window[0]
+        trade_bar_prev = self.trade_bar_window[1]
+        for level in self.get_resistance_levels():
+            if level > trade_bar_lts.High:
+                # levels are ordered in ascending order.
+                # no point in checking any more.
+                break
+            # require above average volume
+            if not trade_bar_lts.Volume > self.sma_volume.Current.Value:
+                continue
+            daily_breakout = trade_bar_lts.Open < level and trade_bar_lts.Close > level
+            gap_up_breakout = trade_bar_prev.Close < level and trade_bar_lts.Open > level
+            if daily_breakout or gap_up_breakout:
+                return level
 
 
 class Breakout(QCAlgorithm):
@@ -157,6 +199,8 @@ class Breakout(QCAlgorithm):
                 self.buy(symbol, order_tag=KMA_PULLBACK)
             if self.pocket_pivot(symbol):
                 self.buy(symbol, order_tag=POCKET_PIVOT)
+            if self.breakout(symbol):
+                self.buy(symbol, order_tag=BREAKOUT)
     
     def buy(self, symbol, order_tag=None, order_properties=None, price=None):
         position_size = self.get_position_size(symbol)
@@ -305,6 +349,13 @@ class Breakout(QCAlgorithm):
         if not indicators.high_7_weeks_ago:
             return False
         return True
+    
+    def breakout(self, symbol):
+        indicators: SymbolIndicators = self.symbol_map[symbol]
+        trade_bar_lts = indicators.trade_bar_window[0]
+        if indicators.breakout_window.IsReady:
+            level = indicators.breakout_window[0]
+            return level * 1.05 > trade_bar_lts.Close > level
     
     def update_screened_symbols(self):
         if self.IsWarmingUp:
