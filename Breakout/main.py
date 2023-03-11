@@ -70,6 +70,31 @@ class SymbolIndicators:
     @property
     def high_7_weeks_ago(self) -> bool:
         return self.max_price.PeriodsSinceMaximum > 5 * 7
+    
+    def get_resistance_levels(self, range_filter: float = 0.005, peak_range: int = 3) -> set[float]:
+        """
+        Finds major resistance levels for data in self.trade_bar_window.
+
+        :param range_filter: Decides if two prices are part of the same resistance level.
+        :param peak_range: Number of candles to check either side of peak candle.
+        :return: set of price resistance levels.
+        """
+        series = self.trade_bar_window
+        peaks = set()
+        for i in range(peak_range, series.Size - peak_range):
+            greater_than_prior_prices = series[i].High > series[i - peak_range].High
+            greater_than_future_prices = series[i].High > series[i + peak_range].High
+            if greater_than_prior_prices and greater_than_future_prices:
+                peaks.add(series[i].High)
+        levels = set()
+        for price in peaks:
+            range_filter = price * range_filter
+            lower_range = price - range_filter
+            upper_range = price + range_filter
+            common_levels = [peak for peak in peaks if peak > lower_range and peak < upper_range]
+            if len(common_levels) > 1:
+                levels.add(max(common_levels))  
+        return levels
 
 
 class Breakout(QCAlgorithm):
