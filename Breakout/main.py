@@ -153,7 +153,6 @@ class SymbolIndicators:
 
 class Breakout(QCAlgorithm):
     def Initialize(self):
-        self.SetStartDate(2023, 2, 1)
         # self.SetStartDate(2021, 1, 1)
         # self.SetEndDate(2021, 12, 31)
         self.SetCash(10000)
@@ -201,6 +200,14 @@ class Breakout(QCAlgorithm):
         self.live_log("processing on data")
         # sort stocks by lowest volatility
         for symbol in sorted(symbols, key=lambda symbol: self.symbol_map[symbol].atrp(data.Bars[symbol].Close)):
+            if self.hvc(symbol):
+                self.buy(symbol, order_tag=HVC)
+            if price := self.inside_day(symbol):
+                self.buy(symbol, order_tag=INSIDE_DAY, order_properties=self.good_for_a_day(), price=price)
+            if self.kma_pullback(symbol):
+                self.buy(symbol, order_tag=KMA_PULLBACK)
+            if self.pocket_pivot(symbol):
+                self.buy(symbol, order_tag=POCKET_PIVOT)
             breakout = self.breakout(symbol)
             if breakout:
                 self.buy(symbol, order_tag=f"{BREAKOUT}: {breakout}")
