@@ -87,18 +87,29 @@ class SymbolIndicators:
     def get_resistance_levels(self, range_filter: float = 0.005, peak_range: int = 3) -> list:
         """
         Finds major resistance levels for data in self.trade_bar_window.
+        Resamples daily data to weekly to find weekly resistance levels.
 
         :param range_filter: Decides if two prices are part of the same resistance level.
         :param peak_range: Number of candles to check either side of peak candle.
         :return: set of price resistance levels.
         """
-        series = self.trade_bar_window
+        df = self.algorithm.PandasConverter.GetDataFrame[TradeBar](list(self.trade_bar_window)[::-1]).reset_index()
+        df.index = df.time
+        df = df.resample('W-Fri')
+        df = df.apply({
+            'open':'first',
+            'high':'max',
+            'low':'min',
+            'close':'last',
+            'volume':'sum'
+        })
         peaks = []
-        for i in range(peak_range, series.Size - peak_range):
-            greater_than_prior_prices = series[i].High > series[i - peak_range].High
-            greater_than_future_prices = series[i].High > series[i + peak_range].High
+        for i in range(peak_range, len(df) - peak_range):
+            greater_than_prior_prices = df.iloc[i].high > df.iloc[i - peak_range].high
+            greater_than_future_prices = df.iloc[i].high > df.iloc[i + peak_range].high
             if greater_than_prior_prices and greater_than_future_prices:
-                peaks.append(series[i].High)
+                peaks.append(df.iloc[i].high)
+        del df
         levels = []
         peaks = sorted(peaks)
         for i, curr_peak in enumerate(peaks):
