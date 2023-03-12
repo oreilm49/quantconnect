@@ -12,20 +12,23 @@ BREAKOUT = 'breakout'
 
 class Breakout(QCAlgorithm):
     def Initialize(self):
-        # self.SetStartDate(2021, 1, 1)
-        # self.SetEndDate(2021, 12, 31)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
         self.EQUITY_RISK_PC = 0.0075
         self.AddUniverse(self.coarse_selection)
         self.symbol_map = {}
-        self.screened_symbols = []
         self.AddEquity("SPY", Resolution.Daily)
-        self.SYMBOLS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRajMcf0SW61y_kCO9s1mhvCxGlGq9PgSRyQyNyQCx9ALfOF800f22Z0OKkL_-PU_jBWowdOBkM6FtM/pub?gid=0&single=true&output=csv'
-        # self.screened_symbols = ["ASAN", "TSLA", "RBLX", "DOCN", "FTNT", "DDOG", "NET", "BILL", "NVDA", "AMBA", "INMD", "AMEH", "AEHR", "SITM", "CROX"]
         self.SL_RISK_PC = -0.05
         self.TP_TARGET = 0.20
+        self.SYMBOLS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRajMcf0SW61y_kCO9s1mhvCxGlGq9PgSRyQyNyQCx9ALfOF800f22Z0OKkL_-PU_jBWowdOBkM6FtM/pub?gid=0&single=true&output=csv'
+        self.screened_symbols = []
+        if not self.LiveMode:
+            # backtest configuration
+            self.screened_symbols = ["ASAN", "TSLA", "RBLX", "DOCN", "FTNT", "DDOG", "NET", "BILL", "NVDA", "AMBA", "INMD", "AMEH", "AEHR", "SITM", "CROX"]
+            self.SetStartDate(2021, 1, 1)
+            self.SetEndDate(2021, 12, 31)
+            
 
     def live_log(self, msg):
         if self.LiveMode:
@@ -34,7 +37,8 @@ class Breakout(QCAlgorithm):
             self.Debug(msg)
 
     def coarse_selection(self, coarse):
-        self.update_screened_symbols()
+        if self.LiveMode:
+            self.update_screened_symbols()
         return [stock.Symbol for stock in coarse if stock.Symbol.Value in self.screened_symbols]
 
     def OnData(self, data):
