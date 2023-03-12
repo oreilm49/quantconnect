@@ -11,17 +11,19 @@ BREAKOUT = 'breakout'
 
 
 class SymbolIndicators:
-    def __init__(self, history) -> None:
+    def __init__(self, algorithm, symbol) -> None:
+        self.algorithm = algorithm
         self.sma = SimpleMovingAverage(50)
         self.sma_volume = SimpleMovingAverage(50)
         self.sma_200 = SimpleMovingAverage(200)
         self.atr = AverageTrueRange(21)
-        self.trade_bar_window = RollingWindow[TradeBar](10)
+        self.trade_bar_window = RollingWindow[TradeBar](50)
         self.max_volume = Maximum(200)
         self.max_price = Maximum(200)
         self.sma_window = RollingWindow[float](2)
         self.breakout_window = RollingWindow[float](1)
 
+        history = algorithm.History(symbol, 200, Resolution.Daily)
         for data in history.itertuples():
             trade_bar = TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
             self.update(trade_bar)
