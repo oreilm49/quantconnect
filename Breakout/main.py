@@ -187,9 +187,7 @@ class Breakout(QCAlgorithm):
             if not data.Bars.ContainsKey(symbol):
                 continue
             if symbol not in self.symbol_map:
-                self.symbol_map[symbol] = SymbolIndicators(
-                    self.History(symbol, 200, Resolution.Daily)
-                )
+                self.symbol_map[symbol] = SymbolIndicators(self, symbol)
             else:
                 self.symbol_map[symbol].update(data.Bars[symbol])
             if not self.symbol_map[symbol].ready:
