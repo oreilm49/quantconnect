@@ -1,94 +1,34 @@
-from AlgorithmImports import SimpleMovingAverage, AverageTrueRange, RollingWindow, TradeBar,\
-    QCAlgorithm, Resolution, BrokerageName, Maximum, OrderProperties, TimeInForce
+from AlgorithmImports import QCAlgorithm, Resolution, BrokerageName, OrderProperties, TimeInForce
 from datetime import timedelta, datetime
+from indicators import SymbolIndicators
 
 
 HVC = 'high volume close'
 INSIDE_DAY = 'inside day'
 KMA_PULLBACK = 'key moving average pullback'
 POCKET_PIVOT = 'pocket pivot'
-
-
-class SymbolIndicators:
-    def __init__(self, history) -> None:
-        self.sma = SimpleMovingAverage(50)
-        self.sma_volume = SimpleMovingAverage(50)
-        self.sma_200 = SimpleMovingAverage(200)
-        self.atr = AverageTrueRange(21)
-        self.trade_bar_window = RollingWindow[TradeBar](10)
-        self.max_volume = Maximum(200)
-        self.max_price = Maximum(200)
-        self.sma_window = RollingWindow[float](2)
-
-        for data in history.itertuples():
-            trade_bar = TradeBar(data.Index[1], data.Index[0], data.open, data.high, data.low, data.close, data.volume, timedelta(1))
-            self.update(trade_bar)
-        
-    def update(self, trade_bar):
-        self.sma.Update(trade_bar.EndTime, trade_bar.Close)
-        self.sma_volume.Update(trade_bar.EndTime, trade_bar.Volume)
-        self.sma_200.Update(trade_bar.EndTime, trade_bar.Close)
-        self.atr.Update(trade_bar)
-        self.trade_bar_window.Add(trade_bar)
-        self.max_volume.Update(trade_bar.EndTime, trade_bar.Volume)
-        self.max_price.Update(trade_bar.EndTime, trade_bar.High)
-        self.sma_window.Add(self.sma.Current.Value)
-    
-    @property
-    def ready(self):
-        return all((
-            self.sma.IsReady,
-            self.sma_volume.IsReady,
-            self.sma_200.IsReady,
-            self.atr.IsReady,
-            self.trade_bar_window.IsReady,
-            self.max_volume.IsReady,
-            self.max_price.IsReady,
-            self.sma_window.IsReady,
-        ))
-    
-    @property
-    def max_vol_on_down_day(self):
-        max_vol = 0
-        for i in range(0, 10):
-            trade_bar = self.trade_bar_window[i]
-            if trade_bar.Close < trade_bar.Open:
-                max_vol = max(max_vol, trade_bar.Volume)
-        return max_vol
-    
-    def atrp(self, close):
-        return (self.atr.Current.Value / close) * 100
-    
-    @property
-    def uptrending(self):
-        return self.sma.Current.Value > self.sma_200.Current.Value
-
-    @property
-    def high_3_weeks_ago(self) -> bool:
-        return self.max_price.PeriodsSinceMaximum > 5 * 3
-
-    @property
-    def high_7_weeks_ago(self) -> bool:
-        return self.max_price.PeriodsSinceMaximum > 5 * 7
+BREAKOUT = 'breakout'
 
 
 class Breakout(QCAlgorithm):
     def Initialize(self):
-        self.SetStartDate(2023, 2, 1)
-        # self.SetStartDate(2021, 1, 1)
-        # self.SetEndDate(2021, 12, 31)
         self.SetCash(10000)
         self.UniverseSettings.Resolution = Resolution.Daily
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
         self.EQUITY_RISK_PC = 0.0075
         self.AddUniverse(self.coarse_selection)
         self.symbol_map = {}
-        self.screened_symbols = []
         self.AddEquity("SPY", Resolution.Daily)
-        self.SYMBOLS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRajMcf0SW61y_kCO9s1mhvCxGlGq9PgSRyQyNyQCx9ALfOF800f22Z0OKkL_-PU_jBWowdOBkM6FtM/pub?gid=0&single=true&output=csv'
-        # self.screened_symbols = ["ASAN", "TSLA", "RBLX", "DOCN", "FTNT", "DDOG", "NET", "BILL", "NVDA", "AMBA", "INMD", "AMEH", "AEHR", "SITM", "CROX"]
         self.SL_RISK_PC = -0.05
         self.TP_TARGET = 0.20
+        self.SYMBOLS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRajMcf0SW61y_kCO9s1mhvCxGlGq9PgSRyQyNyQCx9ALfOF800f22Z0OKkL_-PU_jBWowdOBkM6FtM/pub?gid=0&single=true&output=csv'
+        self.screened_symbols = []
+        if not self.LiveMode:
+            # backtest configuration
+            self.screened_symbols = ["ASAN", "TSLA", "RBLX", "DOCN", "FTNT", "DDOG", "NET", "BILL", "NVDA", "AMBA", "INMD", "AMEH", "AEHR", "SITM", "CROX"]
+            self.SetStartDate(2021, 1, 1)
+            self.SetEndDate(2021, 12, 31)
+            
 
     def live_log(self, msg):
         if self.LiveMode:
@@ -97,7 +37,8 @@ class Breakout(QCAlgorithm):
             self.Debug(msg)
 
     def coarse_selection(self, coarse):
-        self.update_screened_symbols()
+        if self.LiveMode:
+            self.update_screened_symbols()
         return [stock.Symbol for stock in coarse if stock.Symbol.Value in self.screened_symbols]
 
     def OnData(self, data):
@@ -108,9 +49,7 @@ class Breakout(QCAlgorithm):
             if not data.Bars.ContainsKey(symbol):
                 continue
             if symbol not in self.symbol_map:
-                self.symbol_map[symbol] = SymbolIndicators(
-                    self.History(symbol, 200, Resolution.Daily)
-                )
+                self.symbol_map[symbol] = SymbolIndicators(self, symbol)
             else:
                 self.symbol_map[symbol].update(data.Bars[symbol])
             if not self.symbol_map[symbol].ready:
@@ -132,6 +71,9 @@ class Breakout(QCAlgorithm):
                 self.buy(symbol, order_tag=KMA_PULLBACK)
             if self.pocket_pivot(symbol):
                 self.buy(symbol, order_tag=POCKET_PIVOT)
+            breakout = self.breakout(symbol)
+            if breakout:
+                self.buy(symbol, order_tag=f"{BREAKOUT}: {breakout}")
     
     def buy(self, symbol, order_tag=None, order_properties=None, price=None):
         position_size = self.get_position_size(symbol)
@@ -280,6 +222,19 @@ class Breakout(QCAlgorithm):
         if not indicators.high_7_weeks_ago:
             return False
         return True
+    
+    def breakout(self, symbol):
+        """
+        Identifies if the stock is uptrending and is within 5% of a breakout level.
+        Price must be above than the breakout level.
+        :return: The breakout level or None.
+        """
+        indicators: SymbolIndicators = self.symbol_map[symbol]
+        trade_bar_lts = indicators.trade_bar_window[0]
+        if indicators.uptrending and indicators.breakout_window.IsReady:
+            level = indicators.breakout_window[0]
+            if level * 1.05 > trade_bar_lts.Close > level:
+                return level
     
     def update_screened_symbols(self):
         if self.IsWarmingUp:
