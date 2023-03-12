@@ -118,7 +118,7 @@ class SymbolIndicators:
         return levels
     
     @property
-    def is_breakout(self) -> Optional[float]:
+    def is_breakout(self):
         """
         Determines if the current candle is a breakout.
         If so, returns the breakout price level.
@@ -191,16 +191,9 @@ class Breakout(QCAlgorithm):
         self.live_log("processing on data")
         # sort stocks by lowest volatility
         for symbol in sorted(symbols, key=lambda symbol: self.symbol_map[symbol].atrp(data.Bars[symbol].Close)):
-            if self.hvc(symbol):
-                self.buy(symbol, order_tag=HVC)
-            if price := self.inside_day(symbol):
-                self.buy(symbol, order_tag=INSIDE_DAY, order_properties=self.good_for_a_day(), price=price)
-            if self.kma_pullback(symbol):
-                self.buy(symbol, order_tag=KMA_PULLBACK)
-            if self.pocket_pivot(symbol):
-                self.buy(symbol, order_tag=POCKET_PIVOT)
-            if self.breakout(symbol):
-                self.buy(symbol, order_tag=BREAKOUT)
+            breakout = self.breakout(symbol)
+            if breakout:
+                self.buy(symbol, order_tag=f"{BREAKOUT}: {breakout}")
     
     def buy(self, symbol, order_tag=None, order_properties=None, price=None):
         position_size = self.get_position_size(symbol)
@@ -355,7 +348,8 @@ class Breakout(QCAlgorithm):
         trade_bar_lts = indicators.trade_bar_window[0]
         if indicators.breakout_window.IsReady:
             level = indicators.breakout_window[0]
-            return level * 1.05 > trade_bar_lts.Close > level
+            if level * 1.05 > trade_bar_lts.Close > level:
+                return level
     
     def update_screened_symbols(self):
         if self.IsWarmingUp:
