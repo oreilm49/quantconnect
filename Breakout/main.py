@@ -1,4 +1,3 @@
-from typing import Optional
 from AlgorithmImports import SimpleMovingAverage, AverageTrueRange, RollingWindow, TradeBar,\
     QCAlgorithm, Resolution, BrokerageName, Maximum, OrderProperties, TimeInForce
 from datetime import timedelta, datetime
@@ -85,7 +84,7 @@ class SymbolIndicators:
     def high_7_weeks_ago(self) -> bool:
         return self.max_price.PeriodsSinceMaximum > 5 * 7
     
-    def get_resistance_levels(self, range_filter: float = 0.005, peak_range: int = 3) -> list[float]:
+    def get_resistance_levels(self, range_filter: float = 0.005, peak_range: int = 3) -> list:
         """
         Finds major resistance levels for data in self.trade_bar_window.
 
