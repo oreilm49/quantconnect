@@ -175,6 +175,9 @@ class Breakout(QCAlgorithm):
         # must occur within a base
         if not indicators.high_7_weeks_ago:
             return False
+        # must occur within an uptrend
+        if not indicators.uptrending :
+            return False
         return trade_bar_prev.High
     
     def kma_pullback(self, symbol):
