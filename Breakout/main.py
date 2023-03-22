@@ -58,9 +58,9 @@ class Breakout(QCAlgorithm):
                 self.Liquidate(symbol)
             if self.symbol_map[symbol].uptrending and not self.ActiveSecurities[symbol].Invested:
                 symbols.append(symbol)
-        if self.IsWarmingUp:
-            return
         self.live_log("processing on data")
+        if not symbols:
+            self.live_log("no symbols")
         # sort stocks by lowest volatility
         for symbol in sorted(symbols, key=lambda symbol: self.symbol_map[symbol].atrp(data.Bars[symbol].Close)):
             if self.hvc(symbol):
@@ -240,12 +240,9 @@ class Breakout(QCAlgorithm):
                 return level
     
     def update_screened_symbols(self):
-        if self.IsWarmingUp:
-            return
-        if not self.screened_symbols or self.LiveMode:
-            self.screened_symbols = self.Download(self.SYMBOLS_URL).split("\r\n")
-            self.live_log(f"symbols updated: {','.join(self.screened_symbols)}")
-            for symbol in list(self.symbol_map.keys()):
-                if symbol.Value not in self.screened_symbols:
-                    self.live_log(f"removed from indicators: {symbol.Value}")
-                    del self.symbol_map[symbol]
+        self.screened_symbols = self.Download(self.SYMBOLS_URL).split("\r\n")
+        self.live_log(f"symbols updated: {','.join(self.screened_symbols)}")
+        for symbol in list(self.symbol_map.keys()):
+            if symbol.Value not in self.screened_symbols:
+                self.live_log(f"removed from indicators: {symbol.Value}")
+                del self.symbol_map[symbol]
