@@ -229,15 +229,21 @@ class Breakout(QCAlgorithm):
     def breakout(self, symbol):
         """
         Identifies if the stock is uptrending and is within 5% of a breakout level.
-        Price must be above than the breakout level.
+        Price must be above the breakout level.
+        The breakout level must be within 10% of the 50 day high.
+
         :return: The breakout level or None.
         """
         indicators: SymbolIndicators = self.symbol_map[symbol]
         trade_bar_lts = indicators.trade_bar_window[0]
-        if indicators.uptrending and indicators.breakout_window.IsReady:
-            level = indicators.breakout_window[0]
-            if level * 1.05 > trade_bar_lts.Close > level:
-                return level
+        level = indicators.breakout_window[0]
+        if not (indicators.uptrending and indicators.breakout_window.IsReady):
+            return
+        if not (level * 1.05 > trade_bar_lts.Close > level):
+            return
+        if self.max.Current.Value > level * 1.1:
+            return
+        return level
     
     def update_screened_symbols(self):
         self.screened_symbols = self.Download(self.SYMBOLS_URL).split("\r\n")
