@@ -1,18 +1,25 @@
 import datetime
 from AlgorithmImports import Resolution, BrokerageName, QCAlgorithm, QC500UniverseSelectionModel, \
-        ImmediateExecutionModel, RollingWindow
+    ImmediateExecutionModel, RollingWindow, OrderEvent, OrderStatus, OrderTicket
 from turtle_trading import TurtleTrading
+
+
+class MyQC500(QC500UniverseSelectionModel):
+    """
+    Optimized to select the top 250 stocks by dollar volume
+    """
+    numberOfSymbolsCoarse = 250
 
 
 class MasterAlgo(QCAlgorithm):
     def Initialize(self):
-        self.SetStartDate(2021, 1, 1)
+        self.SetStartDate(2002, 1, 1)
         self.SetCash(100000)
         self.resolution = Resolution.Daily
         self.SetWarmUp(datetime.timedelta(200), self.resolution)
         self.UniverseSettings.Resolution = self.resolution
         self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
-        self.SetUniverseSelection(QC500UniverseSelectionModel())
+        self.SetUniverseSelection(MyQC500())
         self.SetExecution(ImmediateExecutionModel())
         self.symbols = {}
         self.EQUITY_RISK_PC = 0.02
@@ -46,11 +53,30 @@ class MasterAlgo(QCAlgorithm):
                 continue
             strategy.OnData(self, data)
 
+    def OnOrderEvent(self, event: OrderEvent) -> None:
+        if event.Status == OrderStatus.Filled:
+            self.symbols[event.Symbol].confirm_position(event)
+        elif event.Status in (OrderStatus.Canceled, OrderStatus.Invalid):
+            strategy_name = self.get_strategy_name_for_order_id(event.OrderId)
+            self.symbols[event.Symbol].delete_position(strategy_name)
+
+    def buy(self, symbol, position_size, strategy_name):
+        self.symbols[symbol].add_position(
+            self.MarketOrder(symbol, position_size), 
+            strategy_name,
+        )
+
+    def liquidate(self, symbol, strategy_name):
+        self.Liquidate(symbol)
+        self.symbols[symbol].delete_position(strategy_name)
+
 
 class SymbolData:
     def __init__(self, algorithm, security, resolution, indicator_configs):
         self.security = security
+        self.algorithm = algorithm
         self.Consolidator = algorithm.ResolveConsolidator(security.Symbol, resolution)
+        # "strategy_name": {"order_id" 1, "created" datetime.datetime()}
         self.positions = {}
         self.indicators = []
         for config in indicator_configs:
@@ -66,23 +92,29 @@ class SymbolData:
             algorithm.RegisterIndicator(security.Symbol, indicator, self.Consolidator)
             algorithm.WarmUpIndicator(security.Symbol, indicator, resolution)
 
-    def add_position(self, strategy_name, size, direction):
+    def add_position(self, order_ticket: OrderTicket, strategy_name: str):
         self.positions[strategy_name] = {
-            "size": size,
-            "direction": direction,
-            "confirmed": False
+            "order_id": order_ticket.OrderId,
         }
 
-    def confirm_position(self, size, direction):
+    def get_strategy_name_for_order_id(self, order_id):
         strategy_name, _ = [(strategy_name, position) for strategy_name, position in self.positions.items()\
-                  if position[size] == size and position[direction] == direction][0]
-        self.positions[strategy_name]["confirmed"] = True
+                  if position["order_id"] == order_id][0]
+        return strategy_name
+
+
+    def confirm_position(self, event: OrderEvent):
+        strategy_name = self.get_strategy_name_for_order_id(event.OrderId)
+        self.positions[strategy_name]["created"] = self.algorithm.Time
     
-    def liquidate_position(self, strategy_name):
+    def delete_position(self, strategy_name):
         del self.positions[strategy_name]
 
     def get_position(self, strategy_name):
         return self.positions[strategy_name]
+    
+    def get_position_age(self, strategy_name) -> datetime.timedelta:
+        return self.get_position(strategy_name)['created'] - self.algorithm.Time
     
     @property
     def ready(self) -> bool:

@@ -1,5 +1,5 @@
 from base import BaseStrategy
-from AlgorithmImports import AverageTrueRange, SimpleMovingAverage, MoneyFlowIndex,\
+from AlgorithmImports import AverageTrueRange, SimpleMovingAverage, RateOfChangePercent,\
     Maximum, Minimum, RollingWindow
 
 
@@ -21,7 +21,7 @@ class TurtleTrading(BaseStrategy):
         ]
         securities = sorted(
             securities,
-            key=lambda symbol: algorithm.symbols[symbol].mfi.Current.Value,
+            key=lambda symbol: algorithm.symbols[symbol].roc.Current.Value,
             reverse=True,
         )[:10]
         for symbol in securities:
@@ -53,9 +53,9 @@ class TurtleTrading(BaseStrategy):
                 "args": [21],
             },
             {
-                "name": "mfi",
-                "class": MoneyFlowIndex,
-                "args": [21],
+                "name": "roc",
+                "class": RateOfChangePercent,
+                "args": [150],
             },
             {
                 "name": "sma",
