@@ -1,0 +1,46 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "type": "text",
+      "version": 2613,
+      "versionNonce": 203197498,
+      "isDeleted": false,
+      "id": "6HIKs-uXCt8JgCVuRg8OA",
+      "fillStyle": "hachure",
+      "strokeWidth": 1,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "angle": 0,
+      "x": 391.6778946241693,
+      "y": 217.89438236325503,
+      "strokeColor": "#000000",
+      "backgroundColor": "#4c6ef5",
+      "width": 1115.87890625,
+      "height": 1050,
+      "seed": 1078021912,
+      "groupIds": [],
+      "roundness": null,
+      "boundElements": [],
+      "updated": 1681118724596,
+      "link": null,
+      "locked": false,
+      "fontSize": 20,
+      "fontFamily": 1,
+      "text": "\nThe Algorithm Framework can't support multiple non correlated models \nwhich trade on different timeframes and possibly a different universe of symbols.\n\nFor an algorithm to contain multiple models, they need to share the following properties:\n- rebalance timeframe\n- universe\n- stop loss & profit taking logic\n- trade exit logic\n\nThe risk management piece of the framework knows nothing about which alpha generated\nan insight upon which a trade was made.\n\n\nSHORT TERM SOLUTION\n- find a long/short mean reversion strategy that can be deployed in the algo framework\n- this will have an alpha for generating long signals and one for short signals\n- the trading timeframe and stop loss mechanics will be identical\n\nLONG TERM SOLUTION\n- self host lean & run each algorithm in it's own virtual server (possibly using kubernetes to manage deployment)\n\n\nMASTER ALGO\n- a framework within the existing QC framework that can support multiple strategies\n\nHow to rebalance on different timeframes\n- algorithm will be set to run daily\n- each strategy must have a rebalance_period property (timedelta)\n- if daily, check that it's a valid trading day\n- if weekly, check that it's a Sunday\n- if monthly, check that it's the first trading day of the month\n\nHow to store positions for each strategy\n- when an order is submitted, update the symbol data object with a position for the strategy + the size\n- when an order is confirmed, find the position with the confirmed amount and update it as confirmed\n- when an order is liquidated, remove the position from symbol data\n\nHow to handle indicators for each strategy\n- one big symbol data class with all required indicators defined\n- try and reuse indicators across strategies: same ATR, SMA, ADX\n- if an indicator needs to be reused with a different lookback, use a name: sma_200 / ema_21",
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "\nThe Algorithm Framework can't support multiple non correlated models \nwhich trade on different timeframes and possibly a different universe of symbols.\n\nFor an algorithm to contain multiple models, they need to share the following properties:\n- rebalance timeframe\n- universe\n- stop loss & profit taking logic\n- trade exit logic\n\nThe risk management piece of the framework knows nothing about which alpha generated\nan insight upon which a trade was made.\n\n\nSHORT TERM SOLUTION\n- find a long/short mean reversion strategy that can be deployed in the algo framework\n- this will have an alpha for generating long signals and one for short signals\n- the trading timeframe and stop loss mechanics will be identical\n\nLONG TERM SOLUTION\n- self host lean & run each algorithm in it's own virtual server (possibly using kubernetes to manage deployment)\n\n\nMASTER ALGO\n- a framework within the existing QC framework that can support multiple strategies\n\nHow to rebalance on different timeframes\n- algorithm will be set to run daily\n- each strategy must have a rebalance_period property (timedelta)\n- if daily, check that it's a valid trading day\n- if weekly, check that it's a Sunday\n- if monthly, check that it's the first trading day of the month\n\nHow to store positions for each strategy\n- when an order is submitted, update the symbol data object with a position for the strategy + the size\n- when an order is confirmed, find the position with the confirmed amount and update it as confirmed\n- when an order is liquidated, remove the position from symbol data\n\nHow to handle indicators for each strategy\n- one big symbol data class with all required indicators defined\n- try and reuse indicators across strategies: same ATR, SMA, ADX\n- if an indicator needs to be reused with a different lookback, use a name: sma_200 / ema_21",
+      "lineHeight": 1.25
+    }
+  ],
+  "appState": {
+    "gridSize": null,
+    "viewBackgroundColor": "#ffffff"
+  },
+  "files": {}
+}
