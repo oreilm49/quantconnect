@@ -65,15 +65,15 @@ class Breakout(QCAlgorithm):
         for symbol in sorted(symbols, key=lambda symbol: self.symbol_map[symbol].atrp(data.Bars[symbol].Close)):
             if self.hvc(symbol):
                 self.buy(symbol, order_tag=HVC)
-            if price := self.inside_day(symbol):
-                self.buy(symbol, order_tag=INSIDE_DAY, order_properties=self.good_for_a_day(), price=price)
-            if self.kma_pullback(symbol):
-                self.buy(symbol, order_tag=KMA_PULLBACK)
-            if self.pocket_pivot(symbol):
-                self.buy(symbol, order_tag=POCKET_PIVOT)
-            breakout = self.breakout(symbol)
-            if breakout:
-                self.buy(symbol, order_tag=f"{BREAKOUT}: {breakout}")
+            # if price := self.inside_day(symbol):
+            #     self.buy(symbol, order_tag=INSIDE_DAY, order_properties=self.good_for_a_day(), price=price)
+            # if self.kma_pullback(symbol):
+            #     self.buy(symbol, order_tag=KMA_PULLBACK)
+            # if self.pocket_pivot(symbol):
+            #     self.buy(symbol, order_tag=POCKET_PIVOT)
+            # breakout = self.breakout(symbol)
+            # if breakout:
+            #     self.buy(symbol, order_tag=f"{BREAKOUT}: {breakout}")
     
     def buy(self, symbol, order_tag=None, order_properties=None, price=None):
         position_size = self.get_position_size(symbol)
@@ -140,12 +140,7 @@ class Breakout(QCAlgorithm):
         if not indicators.max_volume.Current.Value == trade_bar_lts.Volume:
             return False
         # closing range PC above 75; formula = ((close - low) / ((high - low) / 100))
-        if not ((trade_bar_lts.Close - trade_bar_lts.Low) / ((trade_bar_lts.High - trade_bar_lts.Low) / 100)) >= 75:
-            return False
-        if not ((indicators.max_price.Current.Value - trade_bar_lts.High) / indicators.max_price.Current.Value) <= 0.2:
-            return False
-        # must occur within a base
-        if not indicators.high_7_weeks_ago:
+        if not indicators.close_range_pc >= 75:
             return False
         return True
     
@@ -236,12 +231,12 @@ class Breakout(QCAlgorithm):
         """
         indicators: SymbolIndicators = self.symbol_map[symbol]
         trade_bar_lts = indicators.trade_bar_window[0]
-        level = indicators.breakout_window[0]
         if not (indicators.uptrending and indicators.breakout_window.IsReady):
             return
+        level = indicators.breakout_window[0]
         if not (level * 1.05 > trade_bar_lts.Close > level):
             return
-        if self.max.Current.Value > level * 1.1:
+        if indicators.max_price.Current.Value > level * 1.1:
             return
         return level
     

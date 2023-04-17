@@ -142,3 +142,11 @@ class SymbolIndicators:
             gap_up_breakout = trade_bar_prev.Close < level and trade_bar_lts.Open > level
             if daily_breakout or gap_up_breakout:
                 return level
+            
+    @property
+    def close_range_pc(self):
+        trade_bar_lts = self.trade_bar_window[0]
+        high, low, close = trade_bar_lts.High, trade_bar_lts.Low, trade_bar_lts.Close
+        candle_size = high - low
+        close_size = close - low
+        return (close_size / candle_size) * 100
