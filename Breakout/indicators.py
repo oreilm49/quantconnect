@@ -69,7 +69,14 @@ class SymbolIndicators:
     
     @property
     def uptrending(self):
-        return self.sma.Current.Value > self.sma_200.Current.Value
+        """
+        The stock is deemed to be uptrending if the 50 SMA is above 200 SMA
+        and the latest close is above the 200 SMA.
+        
+        :return: True if uptrending.
+        """
+        trade_bar_lts = self.trade_bar_window[0]
+        return self.sma.Current.Value > self.sma_200.Current.Value and trade_bar_lts.Close > self.sma_200.Current.Value
 
     @property
     def high_3_weeks_ago(self) -> bool:
