@@ -1,4 +1,5 @@
 import datetime
+from dateutil.parser import parse
 import json
 
 
@@ -15,4 +16,6 @@ class Position:
 
 
 def position_from_str(content: str) -> Position:
-    return Position(**json.loads(content))
+    content = json.loads(content)
+    content['start'] = parse(content['start'])
+    return Position(**content)
