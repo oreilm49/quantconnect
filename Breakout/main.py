@@ -1,5 +1,6 @@
 from AlgorithmImports import QCAlgorithm, Resolution, BrokerageName, OrderProperties, TimeInForce
 from datetime import timedelta, datetime
+from Breakout.position import Position
 from indicators import SymbolIndicators
 
 
@@ -85,6 +86,7 @@ class Breakout(QCAlgorithm):
             else:
                 self.live_log(f"Market order {symbol.Value} {position_value}: {order_tag or 'no tag'}")
                 self.MarketOrder(symbol, position_size, tag=order_tag)
+            self.ObjectStore.save(symbol.Value, Position(self.Time))
         else:
             self.live_log(f"insufficient cash ({self.Portfolio.Cash}) to purchase {symbol.Value}")
 
