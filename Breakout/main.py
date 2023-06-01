@@ -56,7 +56,7 @@ class Breakout(QCAlgorithm):
             if not self.symbol_map[symbol].ready:
                 continue
             if self.sell_signal(symbol, data):
-                self.Liquidate(symbol)
+                self.sell(symbol)
             if self.symbol_map[symbol].uptrending and not self.ActiveSecurities[symbol].Invested:
                 symbols.append(symbol)
         self.live_log("processing on data")
@@ -89,6 +89,11 @@ class Breakout(QCAlgorithm):
             self.ObjectStore.save(symbol.Value, Position(self.Time))
         else:
             self.live_log(f"insufficient cash ({self.Portfolio.Cash}) to purchase {symbol.Value}")
+            
+    def sell(self, symbol):
+        self.Liquidate(symbol)
+        if self.ObjectStore.ContainsKey(symbol.Value):
+            self.ObjectStore.Delete(symbol.Value)
 
     def good_for_a_day(self):
         """
