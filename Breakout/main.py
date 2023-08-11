@@ -102,64 +102,68 @@ class Breakout(QCAlgorithm):
         profit = self.Portfolio[symbol].UnrealizedProfitPercent
         return profit >= self.TP_TARGET or profit <= self.SL_RISK_PC
     
-    def hvc(self, symbol):
-        """
-        This pattern occurs after a stock gaps up on huge volume due to earnings or another major news event.
-        The most important point for the stock going forwards is the gap up closing price.
-        Highest Volume Ever (HVE)
-        · Highest Volume in 1 Year (HVIPO)
-        · Highest Volume Since IPO Week (HVIPO)
-        · Higheset Volume Since Last EPS (HVLE)
-        These characteristics show clear INSTITUTIONAL DEMAND.
-        · 75% (or more) closing range on gap day
-        · Gap to new highs or within 20% of prior highs        
-        The closing price of the gap up on day 1 is the High Volume Close (HVC).
-        Exit: 3-5% hard stop below the HVC OR an end-of-day close below this level depending on the market environment.
-        Note:
-        - removed gap up logic
-        """
-        indicators: SymbolIndicators = self.symbol_map[symbol]
-        trade_bar_lts = indicators.trade_bar_window[0]
-        # highest vol in 200 days
-        if not indicators.max_volume.Current.Value == trade_bar_lts.Volume:
+    def hvc(self, symbol): 
+        """ 
+        This pattern occurs after a stock gaps up on huge volume due to earnings or another major news event. 
+        The most important point for the stock going forwards is the gap up closing price. 
+        Highest Volume Ever (HVE) 
+        · Highest Volume in 1 Year (HVIPO) 
+        · Highest Volume Since IPO Week (HVIPO) 
+        · Higheset Volume Since Last EPS (HVLE) 
+        These characteristics show clear INSTITUTIONAL DEMAND. 
+        · 75% (or more) closing range on gap day 
+        · Gap to new highs or within 20% of prior highs         
+        The closing price of the gap up on day 1 is the High Volume Close (HVC). 
+        Exit: 3-5% hard stop below the HVC OR an end-of-day close below this level depending on the market environment. 
+        Note: 
+        - removed gap up logic 
+        """ 
+        indicators: SymbolIndicators = self.symbol_map[symbol] 
+        trade_bar_lts = indicators.trade_bar_window[0] 
+        trade_bar_prev = indicators.trade_bar_window[1] 
+        # highest vol in 200 days 
+        if not indicators.max_volume.Current.Value == trade_bar_lts.Volume: 
+            return False 
+        # closing range PC above 75; formula = ((close - low) / ((high - low) / 100)) 
+        if not indicators.close_range_pc >= 75: 
             return False
-        # closing range PC above 75; formula = ((close - low) / ((high - low) / 100))
-        if not indicators.close_range_pc >= 75:
+        
+        if trade_bar_lts.Open < trade_bar_prev.Close and trade_bar_lts.Close < trade_bar_prev.Close:
             return False
         return True
     
     def inside_day(self, symbol): 
-         """ 
-         · Inside Day (today's whole price bar within yesterday's)
-         Two day chart pattern.
-         The body of the second candle must fit inside the first candle.
-         Vol on the second day must be below average.
-         Second day must have a positive close.
-         Must occur within a general market uptrend.
-         Entry:
-             Price closes above the high of the first day after the pattern.
-         """ 
-         indicators: SymbolIndicators = self.symbol_map[symbol] 
-         trade_bar_lts = indicators.trade_bar_window[0] 
-         pattern_day_2 = indicators.trade_bar_window[1] 
-         pattern_day_1 = indicators.trade_bar_window[2] 
-         # inside day 
-         if not ((pattern_day_2.High < pattern_day_1.High) and (pattern_day_2.Low > pattern_day_1.Low)): 
-             return False 
-         # below avg vol 
-         if pattern_day_2.Volume > indicators.sma_volume.Current.Value: 
-             return False 
-         # ensure positive close 
-         if pattern_day_2.Open > pattern_day_2.Close: 
-             return False 
-         # must occur within a base 
-         if not indicators.high_7_weeks_ago: 
-             return False 
-         # must occur within an uptrend 
-         if not indicators.uptrending : 
-             return False
-         # closed above the inside day high
-         return trade_bar_lts.Close > pattern_day_1.High
+        """ 
+        · Inside Day (today's whole price bar within yesterday's)
+        Two day chart pattern.
+        The body of the second candle must fit inside the first candle.
+        Vol on the second day must be below average.
+        Second day must have a positive close.
+        Must occur within a general market uptrend.
+        Entry:
+            Price closes above the high of the first day after the pattern.
+        """ 
+        indicators: SymbolIndicators = self.symbol_map[symbol] 
+        trade_bar_lts = indicators.trade_bar_window[0] 
+        pattern_day_2 = indicators.trade_bar_window[1] 
+        pattern_day_1 = indicators.trade_bar_window[2] 
+        # inside day 
+        if not ((pattern_day_2.High < pattern_day_1.High) and (pattern_day_2.Low > pattern_day_1.Low)): 
+            return False 
+        # below avg vol 
+        if pattern_day_2.Volume > indicators.sma_volume.Current.Value: 
+            return False 
+        # ensure positive close 
+        if pattern_day_2.Open > pattern_day_2.Close: 
+            return False 
+        # must occur within a base 
+        if not indicators.high_7_weeks_ago: 
+            return False 
+        # must occur within an uptrend 
+        if not indicators.uptrending : 
+            return False
+        # closed above the inside day high
+        return trade_bar_lts.Close > pattern_day_1.High
     
     def kma_pullback(self, symbol):
         """
