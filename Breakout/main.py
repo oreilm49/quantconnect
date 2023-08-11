@@ -65,8 +65,8 @@ class Breakout(QCAlgorithm):
         for symbol in sorted(symbols, key=lambda symbol: self.symbol_map[symbol].atrp(data.Bars[symbol].Close)):
             if self.hvc(symbol):
                 self.buy(symbol, order_tag=HVC)
-            if price := self.inside_day(symbol):
-                self.buy(symbol, order_tag=INSIDE_DAY, order_properties=self.good_for_a_day(), price=price)
+            if self.inside_day(symbol):
+                self.buy(symbol, order_tag=INSIDE_DAY)
             if self.kma_pullback(symbol):
                 self.buy(symbol, order_tag=KMA_PULLBACK)
             if self.pocket_pivot(symbol):
@@ -87,22 +87,6 @@ class Breakout(QCAlgorithm):
                 self.MarketOrder(symbol, position_size, tag=order_tag)
         else:
             self.live_log(f"insufficient cash ({self.Portfolio.Cash}) to purchase {symbol.Value}")
-
-    def good_for_a_day(self):
-        """
-        Gets order properties that will expire an order after one day.
-        Handles the edge case where orders raised during the weekend should last for one trading day
-        """
-        order_properties = OrderProperties()
-        day_delta = {
-            5: 2,
-            6: 1,
-        }
-        day_after_tomorrow = self.Time + timedelta(days=2 + day_delta.get(self.Time.isoweekday(), 0))
-        order_properties.TimeInForce = TimeInForce.GoodTilDate(datetime(
-            day_after_tomorrow.year, day_after_tomorrow.month, day_after_tomorrow.day, 0, 0, 1
-        ))
-        return order_properties
 
     def get_position_size(self, symbol):
         """
