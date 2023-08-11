@@ -128,36 +128,38 @@ class Breakout(QCAlgorithm):
             return False
         return True
     
-    def inside_day(self, symbol):
-        """
-        · Inside Day (today's whole price bar within yesterday's)
-        · Below-average volume
-        · Tight chart pattern previous to today (ATRP may be required for this)
-        Entry: The prior day's high or the nearest longer-term breakout level.
-
-        Exit: Inside Day's low.
-
-        The goal is to keep risk manageable with a 3-5% stop (and less if possible!)
-        """
-        indicators: SymbolIndicators = self.symbol_map[symbol]
-        trade_bar_lts = indicators.trade_bar_window[0]
-        trade_bar_prev = indicators.trade_bar_window[1]
-        # inside day
-        if not ((trade_bar_lts.High < trade_bar_prev.High) and (trade_bar_lts.Low > trade_bar_prev.Low)):
-            return False
-        # below avg vol
-        if trade_bar_lts.Volume > indicators.sma_volume.Current.Value:
-            return False
-        # ensure positive close
-        if trade_bar_lts.Open > trade_bar_lts.Close:
-            return False
-        # must occur within a base
-        if not indicators.high_7_weeks_ago:
-            return False
-        # must occur within an uptrend
-        if not indicators.uptrending :
-            return False
-        return trade_bar_prev.High
+    def inside_day(self, symbol): 
+         """ 
+         · Inside Day (today's whole price bar within yesterday's)
+         Two day chart pattern.
+         The body of the second candle must fit inside the first candle.
+         Vol on the second day must be below average.
+         Second day must have a positive close.
+         Must occur within a general market uptrend.
+         Entry:
+             Price closes above the high of the first day after the pattern.
+         """ 
+         indicators: SymbolIndicators = self.symbol_map[symbol] 
+         trade_bar_lts = indicators.trade_bar_window[0] 
+         pattern_day_2 = indicators.trade_bar_window[1] 
+         pattern_day_1 = indicators.trade_bar_window[2] 
+         # inside day 
+         if not ((pattern_day_2.High < pattern_day_1.High) and (pattern_day_2.Low > pattern_day_1.Low)): 
+             return False 
+         # below avg vol 
+         if pattern_day_2.Volume > indicators.sma_volume.Current.Value: 
+             return False 
+         # ensure positive close 
+         if pattern_day_2.Open > pattern_day_2.Close: 
+             return False 
+         # must occur within a base 
+         if not indicators.high_7_weeks_ago: 
+             return False 
+         # must occur within an uptrend 
+         if not indicators.uptrending : 
+             return False
+         # closed above the inside day high
+         return trade_bar_lts.Close > pattern_day_1.High
     
     def kma_pullback(self, symbol):
         """
