@@ -10,10 +10,10 @@ class SymbolIndicators:
         self.sma_volume = SimpleMovingAverage(50)
         self.sma_200 = SimpleMovingAverage(200)
         self.atr = AverageTrueRange(21)
-        self.trade_bar_window = RollingWindow[TradeBar](50)
+        self.trade_bar_window = RollingWindow[TradeBar](200)
         self.max_volume = Maximum(200)
         self.max_price = Maximum(200)
-        self.sma_window = RollingWindow[float](2)
+        self.sma_window = RollingWindow[float](3)
         self.breakout_window = RollingWindow[float](1)
 
         history = algorithm.History(symbol, 200, Resolution.Daily)
@@ -158,25 +158,24 @@ class SymbolIndicators:
         close_size = close - low
         return (close_size / candle_size) * 100
 
-    def get_sma_violated(self, sma) -> bool:
+    def sma_violated(self) -> bool:
         """
         Returns True if the SMA 50 has been violated.
         * 3 day pattern
         * On day 1, price trends above SMA 50 
         * Day 2 & 3 closes below SMA 50
         * Day 3 closes below low of day two
+        * Day 2 slices through on huge volume
         Usually signals a short entry, or reason to liquidate long position.
         """
         day_1, day_2, day_3 = (self.trade_bar_window[i] for i in (2, 1, 0))
-        if day_1.Close < sma.Current.Value:
+        if day_1.Close < self.sma_window[2]:
             return False
-        if day_2.Close > sma.Current.Value:
+        if day_2.Close > self.sma_window[1]:
             return False
-        if day_3.Close > sma.Current.Value:
+        if day_3.Close > self.sma.Current.Value:
             return False
-        return day_3.Close < day_2.Low
-
-    def short_entry(self) -> bool:
-        if self.sma.Current.Value > self.sma_200.Current.Value:
+        if day_3.Close > day_2.Low:
             return False
-        return self.get_sma_violated(self.sma)
+        return day_2.Volume >= (self.sma_volume.Current.Value * 1.5)
+    
