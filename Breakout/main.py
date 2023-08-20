@@ -194,22 +194,23 @@ class Breakout(QCAlgorithm):
     def pocket_pivot(self, symbol):
         """
         A Pocket Pivot is the current up day's volume must be larger than any of the down volume days in the prior 10 days.
+        Requires a powerful bounce off the 50 SMA.
+        * The low of the day is below the 50 SMA.
+        * The stock closes above 50 SMA on high volume.
+        These characteristics signal institution support.
         """
         indicators: SymbolIndicators = self.symbol_map[symbol]
         trade_bar_lts = indicators.trade_bar_window[0]
         # up day
-        if indicators.trade_bar_window[0].Open > indicators.trade_bar_window[0].Close:
+        if trade_bar_lts.Open > trade_bar_lts.Close:
             return False
         # pocket pivot
-        if indicators.max_vol_on_down_day > indicators.trade_bar_window[0].Volume:
+        if indicators.max_vol_on_down_day > trade_bar_lts.Volume:
             return False
         # low of the day is greater than SMA
         if trade_bar_lts.Low > indicators.sma_window[0]:
             return False
-        # must occur within a base
-        if not indicators.high_7_weeks_ago:
-            return False
-        return True
+        return trade_bar_lts.Close > indicators.sma_window[0]
     
     def breakout(self, symbol):
         """
