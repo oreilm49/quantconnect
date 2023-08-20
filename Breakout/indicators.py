@@ -157,3 +157,26 @@ class SymbolIndicators:
         candle_size = high - low
         close_size = close - low
         return (close_size / candle_size) * 100
+
+    def get_sma_violated(self, sma) -> bool:
+        """
+        Returns True if the SMA 50 has been violated.
+        * 3 day pattern
+        * On day 1, price trends above SMA 50 
+        * Day 2 & 3 closes below SMA 50
+        * Day 3 closes below low of day two
+        Usually signals a short entry, or reason to liquidate long position.
+        """
+        day_1, day_2, day_3 = (self.trade_bar_window[i] for i in (2, 1, 0))
+        if day_1.Close < sma.Current.Value:
+            return False
+        if day_2.Close > sma.Current.Value:
+            return False
+        if day_3.Close > sma.Current.Value:
+            return False
+        return day_3.Close < day_2.Low
+
+    def short_entry(self) -> bool:
+        if self.sma.Current.Value > self.sma_200.Current.Value:
+            return False
+        return self.get_sma_violated(self.sma)
