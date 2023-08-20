@@ -1,13 +1,7 @@
-from AlgorithmImports import QCAlgorithm, Resolution, BrokerageName, OrderProperties, TimeInForce
-from datetime import timedelta, datetime
+from AlgorithmImports import QCAlgorithm, Resolution, BrokerageName
+
+from constants import HVC, SHORT, INSIDE_DAY, KMA_PULLBACK, POCKET_PIVOT, BREAKOUT, BACKTEST_SYMBOLS
 from indicators import SymbolIndicators
-
-
-HVC = 'high volume close'
-INSIDE_DAY = 'inside day'
-KMA_PULLBACK = 'key moving average pullback'
-POCKET_PIVOT = 'pocket pivot'
-BREAKOUT = 'breakout'
 
 
 class Breakout(QCAlgorithm):
@@ -25,7 +19,7 @@ class Breakout(QCAlgorithm):
         self.screened_symbols = []
         if not self.LiveMode:
             # backtest configuration
-            self.screened_symbols = ["ASAN", "TSLA", "RBLX", "DOCN", "FTNT", "DDOG", "NET", "BILL", "NVDA", "AMBA", "INMD", "AMEH", "AEHR", "SITM", "CROX"]
+            self.screened_symbols = BACKTEST_SYMBOLS
             self.SetStartDate(2021, 1, 1)
             self.SetEndDate(2021, 12, 31)
             
@@ -74,6 +68,16 @@ class Breakout(QCAlgorithm):
             breakout = self.breakout(symbol)
             if breakout:
                 self.buy(symbol, order_tag=f"{BREAKOUT}: {breakout}")
+        # Shorting logic
+        for symbol, indicators in self.symbol_map.items():
+            if not self.ActiveSecurities[symbol].Invested:
+                continue
+            if indicators.uptrending:
+                continue
+            if self.short_entry(symbol):
+                self.short(symbol)
+
+
     
     def buy(self, symbol, order_tag=None, order_properties=None, price=None):
         position_size = self.get_position_size(symbol)
@@ -85,6 +89,14 @@ class Breakout(QCAlgorithm):
             else:
                 self.live_log(f"Market order {symbol.Value} {position_value}: {order_tag or 'no tag'}")
                 self.MarketOrder(symbol, position_size, tag=order_tag)
+        else:
+            self.live_log(f"insufficient cash ({self.Portfolio.Cash}) to purchase {symbol.Value}")
+    
+    def short(self, symbol):
+        position_size = self.get_position_size(symbol)
+        position_value = position_size * self.ActiveSecurities[symbol].Price
+        if position_value < self.Portfolio.Cash:
+                self.MarketOrder(symbol, position_size * -1, tag=SHORT)
         else:
             self.live_log(f"insufficient cash ({self.Portfolio.Cash}) to purchase {symbol.Value}")
 
@@ -204,7 +216,7 @@ class Breakout(QCAlgorithm):
         if indicators.max_vol_on_down_day > indicators.trade_bar_window[0].Volume:
             return False
         # low of the day is greater than SMA
-        if trade_bar_lts.Low > indicators.sma_window[0]:
+        if trade_bar_lts.Low > indicators.sma.Current.Value[0]:
             return False
         # must occur within a base
         if not indicators.high_7_weeks_ago:
@@ -229,6 +241,21 @@ class Breakout(QCAlgorithm):
         if indicators.max_price.Current.Value > level * 1.1:
             return
         return level
+
+    def short_entry(self, symbol) -> bool:
+        """
+        A stock has had a powerful run up and topped.
+        After topping it begins a downtrend, eventually violating the 50 MA.
+        In pullbacks it reclaims the 50 day.
+        A 3rd violation on heavy volume signals a short entry.
+        Entry criteria (not implemented yet):
+        * 50 MA below 200 MA
+        * Price violates 50 MA x 3
+        * 3rd violation is on heavy volume (100% over vol 50 ma)
+        * Prior rally was strong
+        """
+        indicators: SymbolIndicators = self.symbol_map[symbol]
+        return (indicators.sma.Current.Value < indicators.sma_200.Current.Value) and indicators.sma_violated()
     
     def update_screened_symbols(self):
         self.screened_symbols = self.Download(self.SYMBOLS_URL).split("\r\n")
