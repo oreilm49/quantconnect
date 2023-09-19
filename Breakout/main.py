@@ -67,10 +67,6 @@ class Breakout(QCAlgorithm):
                 self.buy(symbol, order_tag=HVC)
             if self.inside_day(symbol):
                 self.buy(symbol, order_tag=INSIDE_DAY)
-            if self.kma_pullback(symbol):
-                self.buy(symbol, order_tag=KMA_PULLBACK)
-            if self.pocket_pivot(symbol):
-                self.buy(symbol, order_tag=POCKET_PIVOT)
             breakout = self.breakout(symbol)
             if breakout:
                 self.buy(symbol, order_tag=f"{BREAKOUT}: {breakout}")
@@ -127,8 +123,11 @@ class Breakout(QCAlgorithm):
         # closing range PC above 75; formula = ((close - low) / ((high - low) / 100)) 
         if not indicators.close_range_pc >= 75: 
             return False
-        
+        # ensure the stock hasn't gapped down previously
         if trade_bar_lts.Open < trade_bar_prev.Close and trade_bar_lts.Close < trade_bar_prev.Close:
+            return False
+        # must occur within an uptrend 
+        if not indicators.uptrending : 
             return False
         return True
     
@@ -164,52 +163,6 @@ class Breakout(QCAlgorithm):
             return False
         # closed above the inside day high
         return trade_bar_lts.Close > pattern_day_1.High
-    
-    def kma_pullback(self, symbol):
-        """
-        The point of this setup is to capture weakness in leading stocks as they find support from institutions on the 10-week moving average.
-        Here are some key things to look for:
-        · Stock should be pulling back from new highs (52-week or all-time)
-        · Uptrending 10-week Moving Average
-        · Volume should be low on a pullback
-        · Buy occurs after stock reverses higher
-        """
-        indicators: SymbolIndicators = self.symbol_map[symbol]
-        trade_bar_lts = indicators.trade_bar_window[0]
-        trade_bar_prev = indicators.trade_bar_window[1]
-        # recent new high (within the three weeks)
-        if indicators.high_3_weeks_ago:
-            return False
-        # touched the 50 day
-        if not (trade_bar_prev.Low <= indicators.sma_window[1]):
-            return False
-        # up day
-        if trade_bar_lts.Open > trade_bar_lts.Close:
-            return False
-        # low above 50 day
-        if indicators.sma_window[0] >= trade_bar_lts.Low:
-            return False
-        return True
-    
-    def pocket_pivot(self, symbol):
-        """
-        A Pocket Pivot is the current up day's volume must be larger than any of the down volume days in the prior 10 days.
-        """
-        indicators: SymbolIndicators = self.symbol_map[symbol]
-        trade_bar_lts = indicators.trade_bar_window[0]
-        # up day
-        if indicators.trade_bar_window[0].Open > indicators.trade_bar_window[0].Close:
-            return False
-        # pocket pivot
-        if indicators.max_vol_on_down_day > indicators.trade_bar_window[0].Volume:
-            return False
-        # low of the day is greater than SMA
-        if trade_bar_lts.Low > indicators.sma_window[0]:
-            return False
-        # must occur within a base
-        if not indicators.high_7_weeks_ago:
-            return False
-        return True
     
     def breakout(self, symbol):
         """
