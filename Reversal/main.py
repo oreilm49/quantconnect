@@ -33,7 +33,7 @@ class Reversal(QCAlgorithm):
             indicators = self.symbol_map[symbol]['indicators']
             if not indicators.ready:
                 continue
-            reversal, stop_loss = indicators.reversal.signal
+            reversal, stop_loss = indicators.reversal.get_signal()
             if reversal == 0:
                 continue
             elif reversal < 0:
