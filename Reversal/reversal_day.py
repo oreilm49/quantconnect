@@ -1,12 +1,17 @@
 class ReversalDayIndicator:
     def __init__(self, window):
         self.window = window
-        self.signal = sum([
+        self.signal = self.get_signal()
+    
+    def get_signal(self):
+        for indicator, stop_loss in [
             self.reversal_day,
             self.key_reversal_day,
             self.outside_reversal_day,
             self.outside_key_reversal_day,
-        ])
+        ]:
+            if indicator is not 0:
+                return indicator, stop_loss
 
     @property
     def reversal_day(self):
@@ -20,12 +25,12 @@ class ReversalDayIndicator:
         today = self.window[0]
 
         if today.High > yesterday.High and today.Close < min(yesterday.Close, today.Open):
-            return -1  # Short signal
+            return -1, today.High  # Short signal and stop loss
 
         if today.Low < yesterday.Low and today.Close > max(yesterday.Close, today.Open):
-            return 1  # Long signal
+            return 1, today.Low  # Long signal and stop loss
 
-        return 0  # No signal
+        return 0, None  # No signal
 
     @property
     def key_reversal_day(self):
@@ -38,9 +43,9 @@ class ReversalDayIndicator:
         today = self.window[0]
 
         if today.Open < yesterday.Close and today.High > yesterday.High and today.Close < min(yesterday.Close, today.Open):
-            return -1  # Short signal
+            return -1, today.High  # Short signal and stop loss
 
-        return 0  # No signal or long signal not defined for KRD
+        return 0, None  # No signal or long signal not defined for KRD
 
     @property
     def outside_reversal_day(self):
@@ -55,13 +60,13 @@ class ReversalDayIndicator:
 
         if (today.High > yesterday.High and today.Low < yesterday.Low and
                 today.Close < min(yesterday.Close, today.Open)):
-            return -1  # Short signal
+            return -1, today.High  # Short signal and stop loss
 
         if (today.High > yesterday.High and today.Low < yesterday.Low and
                 today.Close > max(yesterday.Close, today.Open)):
-            return 1  # Long signal
+            return 1, today.Low  # Long signal and stop loss
 
-        return 0  # No signal
+        return 0, None  # No signal
 
     @property
     def outside_key_reversal_day(self):
@@ -77,6 +82,7 @@ class ReversalDayIndicator:
                 today.High > yesterday.High and
                 today.Low < yesterday.Low and
                 today.Close < min(yesterday.Close, today.Open)):
-            return -1  # Short signal
+            return -1, today.High  # Short signal and stop loss
 
-        return 0  # No signal or long signal not defined for OKRD
+        return 0, None  # No signal or long signal not defined for OKRD
+
