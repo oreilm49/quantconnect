@@ -12,6 +12,7 @@ class ReversalDayIndicator:
         ]:
             if indicator is not 0:
                 return indicator, stop_loss
+        return 0, None
 
     @property
     def reversal_day(self):
