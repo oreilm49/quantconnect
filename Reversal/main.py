@@ -1,18 +1,56 @@
-from AlgorithmImports import *
+from AlgorithmImports import QCAlgorithm, Resolution, BrokerageName
+from indicators import SymbolIndicators
 
 
 class Reversal(QCAlgorithm):
     def Initialize(self):
-        self.SetStartDate(2013, 10, 7)  # Set Start Date
-        self.SetEndDate(2013, 10, 11)  # Set End Date
-        self.SetCash(100000)  # Set Strategy Cash
-        self.AddEquity("SPY", Resolution.Minute)
-
+        self.SetCash(10000)
+        self.UniverseSettings.Resolution = Resolution.Daily
+        self.SetBrokerageModel(BrokerageName.InteractiveBrokersBrokerage)
+        self.EQUITY_RISK_PC = 0.0075
+        self.symbol_map = {}
+        self.SL_RISK_PC = -0.05
+        self.TP_TARGET = 0.20
+        self.SetStartDate(2021, 1, 1)
+        self.SetEndDate(2022, 12, 31)
+        self.symbols = ["TSLA", "GOOGL", "AAPL"]
+        self.symbol_map = {}
+        for symbol in self.symbols:
+            self.AddEquity(symbol)
+    
     def OnData(self, data):
-        """OnData event is the primary entry point for your algorithm. Each new data point will be pumped in here.
-            Arguments:
-                data: Slice object keyed by symbol containing the stock data
+        for symbol in self.ActiveSecurities.Keys:
+            if symbol.Value not in self.symbols:
+                continue
+            if not data.Bars.ContainsKey(symbol):
+                continue
+            if symbol not in self.symbol_map:
+                self.symbol_map[symbol] = SymbolIndicators(self, symbol)
+            else:
+                self.symbol_map[symbol].update(data.Bars[symbol])
+            if not self.symbol_map[symbol].ready:
+                continue
+            reversal = self.symbol_map[symbol].reversal.signal
+            if reversal == 0:
+                continue
+            elif reversal < 0:
+                self.Liquidate(symbol)
+            elif reversal > 0:
+                self.buy(symbol)
+    
+    def buy(self, symbol, order_tag=None):
+        position_size = self.get_position_size(symbol)
+        position_value = position_size * self.ActiveSecurities[symbol].Price
+        if position_value < self.Portfolio.Cash:
+            self.MarketOrder(symbol, position_size, tag=order_tag)
+
+    def get_position_size(self, symbol):
         """
-        if not self.Portfolio.Invested:
-            self.SetHoldings("SPY", 1)
-            self.Debug("Purchased Stock")
+        Gets the lowest risk position size
+        volatility_size = ($total equity * portfolio risk %) / ATR(21)
+        risk_size = ($total equity * portfolio risk %) / $value of risk on trade
+        """
+        volatility_size = (self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / self.symbol_map[symbol].atr.Current.Value
+        risk_size = (self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / (self.ActiveSecurities[symbol].Price * (self.SL_RISK_PC * -1))
+        return round(min(volatility_size, risk_size))
+
