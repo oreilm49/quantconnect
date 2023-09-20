@@ -24,6 +24,8 @@ class ReversalDayIndicator:
         """
         yesterday = self.window[1]
         today = self.window[0]
+        if yesterday.Volume > today.Volume:
+            return 0, None  # No signal
 
         if today.High > yesterday.High and today.Close < min(yesterday.Close, today.Open):
             return -1, today.High  # Short signal and stop loss
@@ -42,6 +44,8 @@ class ReversalDayIndicator:
         """
         yesterday = self.window[1]
         today = self.window[0]
+        if yesterday.Volume > today.Volume:
+            return 0, None  # No signal
 
         if today.Open < yesterday.Close and today.High > yesterday.High and today.Close < min(yesterday.Close, today.Open):
             return -1, today.High  # Short signal and stop loss
@@ -58,6 +62,8 @@ class ReversalDayIndicator:
         """
         yesterday = self.window[1]
         today = self.window[0]
+        if yesterday.Volume > today.Volume:
+            return 0, None  # No signal
 
         if (today.High > yesterday.High and today.Low < yesterday.Low and
                 today.Close < min(yesterday.Close, today.Open)):
@@ -78,6 +84,8 @@ class ReversalDayIndicator:
         """
         yesterday = self.window[1]
         today = self.window[0]
+        if yesterday.Volume > today.Volume:
+            return 0, None  # No signal
 
         if (today.Open < yesterday.Close and
                 today.High > yesterday.High and
