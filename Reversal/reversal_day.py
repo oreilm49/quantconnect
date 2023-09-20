@@ -2,7 +2,12 @@ class ReversalDayIndicator:
     def __init__(self, window):
         self.window = window
         self.signal = self.get_signal()
-    
+        self.stop_loss_wiggle_pc = 0.02
+        self.today = self.window[0]
+        self.yesterday = self.window[1]
+        self.short_stop_loss = self.today.High * (1 + self.stop_loss_wiggle_pc)
+        self.long_stop_loss = self.today.Low * (1 - self.stop_loss_wiggle_pc) 
+
     def get_signal(self):
         for indicator, stop_loss in [
             self.reversal_day,
@@ -22,16 +27,14 @@ class ReversalDayIndicator:
         A RD bottom (long signal) is when the market makes a new low but closes above the prior day's close and the current day's open.
         Returns -1 for a short signal, 1 for a long signal, and 0 for no signal.
         """
-        yesterday = self.window[1]
-        today = self.window[0]
-        if yesterday.Volume > today.Volume:
+        if self.yesterday.Volume > self.today.Volume:
             return 0, None  # No signal
 
-        if today.High > yesterday.High and today.Close < min(yesterday.Close, today.Open):
-            return -1, today.High  # Short signal and stop loss
+        if self.today.High > self.yesterday.High and self.today.Close < min(self.yesterday.Close, self.today.Open):
+            return -1, self.short_stop_loss  # Short signal and stop loss
 
-        if today.Low < yesterday.Low and today.Close > max(yesterday.Close, today.Open):
-            return 1, today.Low  # Long signal and stop loss
+        if self.today.Low < self.yesterday.Low and self.today.Close > max(self.yesterday.Close, self.today.Open):
+            return 1, self.long_stop_loss  # Long signal and stop loss
 
         return 0, None  # No signal
 
@@ -40,17 +43,21 @@ class ReversalDayIndicator:
         """
         Checks if the most recent day in the window is a Key Reversal Day (KRD).
         A KRD (short signal) is when the market opens below the prior day's close, makes a new high, but closes below the prior day's close and the current day's open.
-        Returns -1 for a short signal and 0 for no signal or long signal not defined for KRD.
+        A KRD (long signal) is when the market opens above the prior day's close, makes a new low, but closes above the prior day's close and the current day's open.
+        Returns -1 for a short signal, 1 for a long signal, and 0 for no signal.
         """
-        yesterday = self.window[1]
-        today = self.window[0]
-        if yesterday.Volume > today.Volume:
+        
+        if self.yesterday.Volume > self.today.Volume:
             return 0, None  # No signal
 
-        if today.Open < yesterday.Close and today.High > yesterday.High and today.Close < min(yesterday.Close, today.Open):
-            return -1, today.High  # Short signal and stop loss
+        if self.today.Open < self.yesterday.Close and self.today.High > self.yesterday.High and self.today.Close < min(self.yesterday.Close, self.today.Open):
+            return -1, self.short_stop_loss  # Short signal and stop loss
 
-        return 0, None  # No signal or long signal not defined for KRD
+        if self.today.Open > self.yesterday.Close and self.today.Low < self.yesterday.Low and self.today.Close > max(self.yesterday.Close, self.today.Open):
+            return 1, self.long_stop_loss  # Long signal and stop loss
+
+        return 0, None  # No signal
+
 
     @property
     def outside_reversal_day(self):
@@ -60,18 +67,16 @@ class ReversalDayIndicator:
         An OSRD bottom (long signal) is when the market makes a new high and low, but closes above the prior day's close and the current day's open.
         Returns -1 for a short signal, 1 for a long signal, and 0 for no signal.
         """
-        yesterday = self.window[1]
-        today = self.window[0]
-        if yesterday.Volume > today.Volume:
+        if self.yesterday.Volume > self.today.Volume:
             return 0, None  # No signal
 
-        if (today.High > yesterday.High and today.Low < yesterday.Low and
-                today.Close < min(yesterday.Close, today.Open)):
-            return -1, today.High  # Short signal and stop loss
+        if (self.today.High > self.yesterday.High and self.today.Low < self.yesterday.Low and
+                self.today.Close < min(self.yesterday.Close, self.today.Open)):
+            return -1, self.short_stop_loss  # Short signal and stop loss
 
-        if (today.High > yesterday.High and today.Low < yesterday.Low and
-                today.Close > max(yesterday.Close, today.Open)):
-            return 1, today.Low  # Long signal and stop loss
+        if (self.today.High > self.yesterday.High and self.today.Low < self.yesterday.Low and
+                self.today.Close > max(self.yesterday.Close, self.today.Open)):
+            return 1, self.long_stop_loss  # Long signal and stop loss
 
         return 0, None  # No signal
 
@@ -80,18 +85,22 @@ class ReversalDayIndicator:
         """
         Checks if the most recent day in the window is an Outside Key Reversal Day (OSKRD).
         An OSKRD (short signal) is when the market opens below the prior day's close, makes a new high and low, but closes below the prior day's close and the current day's open.
-        Returns -1 for a short signal and 0 for no signal or long signal not defined for OKRD.
+        An OSKRD (long signal) is when the market opens above the prior day's close, makes a new high and low, but closes above the prior day's close and the current day's open.
+        Returns -1 for a short signal, 1 for a long signal, and 0 for no signal.
         """
-        yesterday = self.window[1]
-        today = self.window[0]
-        if yesterday.Volume > today.Volume:
+        if self.yesterday.Volume > self.today.Volume:
             return 0, None  # No signal
 
-        if (today.Open < yesterday.Close and
-                today.High > yesterday.High and
-                today.Low < yesterday.Low and
-                today.Close < min(yesterday.Close, today.Open)):
-            return -1, today.High  # Short signal and stop loss
+        if (self.today.Open < self.yesterday.Close and
+                self.today.High > self.yesterday.High and
+                self.today.Low < self.yesterday.Low and
+                self.today.Close < min(self.yesterday.Close, self.today.Open)):
+            return -1, self.short_stop_loss  # Short signal and stop loss
 
-        return 0, None  # No signal or long signal not defined for OKRD
+        if (self.today.Open > self.yesterday.Close and
+                self.today.High > self.yesterday.High and
+                self.today.Low < self.yesterday.Low and
+                self.today.Close > max(self.yesterday.Close, self.today.Open)):
+            return 1, self.long_stop_loss  # Long signal and stop loss
 
+        return 0, None  # No signal
