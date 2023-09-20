@@ -1,12 +1,11 @@
 class ReversalDayIndicator:
     def __init__(self, window):
         self.window = window
-        self.signal = self.get_signal()
         self.stop_loss_wiggle_pc = 0.02
         self.today = self.window[0]
         self.yesterday = self.window[1]
         self.short_stop_loss = self.today.High * (1 + self.stop_loss_wiggle_pc)
-        self.long_stop_loss = self.today.Low * (1 - self.stop_loss_wiggle_pc) 
+        self.long_stop_loss = self.today.Low * (1 - self.stop_loss_wiggle_pc)
 
     def get_signal(self):
         for indicator, stop_loss in [
