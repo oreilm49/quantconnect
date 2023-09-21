@@ -34,14 +34,18 @@ class Reversal(QCAlgorithm):
             if not indicators.ready:
                 continue
             reversal, stop_loss = indicators.reversal.get_signal()
-            if reversal == 0:
-                continue
-            elif reversal < 0:
+            if self.ActiveSecurities[symbol].Invested and self.sell_signal(symbol):
                 self.Liquidate(symbol)
                 if 'sl' in self.symbol_map[symbol]:
                     self.symbol_map[symbol]['sl'].Cancel()
-            elif reversal > 0 and not self.ActiveSecurities[symbol].Invested:
+                    del self.symbol_map[symbol]['sl']
+            elif reversal > 0 and indicators.huge_volume and not self.ActiveSecurities[symbol].Invested:
                 self.buy(symbol, stop_loss=stop_loss)
+    
+    def sell_signal(self, symbol) -> bool:
+        indicators = self.symbol_map[symbol]['indicators']
+        profit = self.Portfolio[symbol].UnrealizedProfitPercent
+        return indicators.extended_from_ma or profit >= self.TP_TARGET or profit <= self.SL_RISK_PC
     
     def buy(self, symbol, order_tag=None, stop_loss=None):
         position_size = self.get_position_size(symbol)
@@ -60,4 +64,3 @@ class Reversal(QCAlgorithm):
         volatility_size = (self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / self.symbol_map[symbol]['indicators'].atr.Current.Value
         risk_size = (self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / (self.ActiveSecurities[symbol].Price * (self.SL_RISK_PC * -1))
         return round(min(volatility_size, risk_size))
-
