@@ -1,6 +1,9 @@
+import datetime
 from AlgorithmImports import SimpleMovingAverage, AverageTrueRange, RollingWindow, TradeBar,\
     Resolution, Maximum
 from datetime import timedelta
+import pandas as pd
+import numpy as np
 
 
 class SymbolIndicators:
@@ -10,8 +13,7 @@ class SymbolIndicators:
         self.sma_volume = SimpleMovingAverage(50)
         self.sma_200 = SimpleMovingAverage(200)
         self.atr = AverageTrueRange(21)
-        self.trade_bar_window = RollingWindow[TradeBar](50)
-        self.max_volume = Maximum(200)
+        self.trade_bar_window = RollingWindow[TradeBar](200)
         self.max_price = Maximum(200)
         self.sma_window = RollingWindow[float](2)
         self.breakout_window = RollingWindow[float](1)
@@ -27,7 +29,6 @@ class SymbolIndicators:
         self.sma_200.Update(trade_bar.EndTime, trade_bar.Close)
         self.atr.Update(trade_bar)
         self.trade_bar_window.Add(trade_bar)
-        self.max_volume.Update(trade_bar.EndTime, trade_bar.Volume)
         self.max_price.Update(trade_bar.EndTime, trade_bar.High)
         self.sma_window.Add(self.sma.Current.Value)
         if self.breakout_ready:
@@ -43,7 +44,6 @@ class SymbolIndicators:
             self.sma_200.IsReady,
             self.atr.IsReady,
             self.trade_bar_window.IsReady,
-            self.max_volume.IsReady,
             self.max_price.IsReady,
             self.sma_window.IsReady,
         ))
@@ -54,15 +54,7 @@ class SymbolIndicators:
             self.sma_volume.IsReady,
             self.trade_bar_window.IsReady,
         ))
-    
-    @property
-    def max_vol_on_down_day(self):
-        max_vol = 0
-        for i in range(0, 10):
-            trade_bar = self.trade_bar_window[i]
-            if trade_bar.Close < trade_bar.Open:
-                max_vol = max(max_vol, trade_bar.Volume)
-        return max_vol
+
     
     def atrp(self, close):
         return (self.atr.Current.Value / close) * 100
@@ -79,22 +71,11 @@ class SymbolIndicators:
         return self.sma.Current.Value > self.sma_200.Current.Value and trade_bar_lts.Close > self.sma_200.Current.Value
 
     @property
-    def high_3_weeks_ago(self) -> bool:
-        return self.max_price.PeriodsSinceMaximum > 5 * 3
-
-    @property
     def high_7_weeks_ago(self) -> bool:
         return self.max_price.PeriodsSinceMaximum > 5 * 7
     
-    def get_resistance_levels(self, range_filter: float = 0.005, peak_range: int = 3) -> list:
-        """
-        Finds major resistance levels for data in self.trade_bar_window.
-        Resamples daily data to weekly to find weekly resistance levels.
-
-        :param range_filter: Decides if two prices are part of the same resistance level.
-        :param peak_range: Number of candles to check either side of peak candle.
-        :return: set of price resistance levels.
-        """
+    @property
+    def weekly_data(self):
         df = self.algorithm.PandasConverter.GetDataFrame[TradeBar](list(self.trade_bar_window)[::-1]).reset_index()
         df.index = df.time
         df = df.resample('W-Fri')
@@ -105,15 +86,26 @@ class SymbolIndicators:
             'close':'last',
             'volume':'sum'
         })
-        peaks = []
+        return df
+    
+    def get_resistance_levels(self, df, range_filter: float = 0.005, peak_range: int = 3) -> list:
+        """
+        Finds major resistance levels for data in self.trade_bar_window.
+        Resamples daily data to weekly to find weekly resistance levels.
+
+        :param range_filter: Decides if two prices are part of the same resistance level.
+        :param peak_range: Number of candles to check either side of peak candle.
+        :return: set of price resistance levels.
+        """
+        peaks_by_time = {}
         for i in range(peak_range, len(df) - peak_range):
             greater_than_prior_prices = df.iloc[i].high > df.iloc[i - peak_range].high
             greater_than_future_prices = df.iloc[i].high > df.iloc[i + peak_range].high
             if greater_than_prior_prices and greater_than_future_prices:
-                peaks.append(df.iloc[i].high)
+                peaks_by_time[df.iloc[i].high] = df.iloc[i].time
         del df
         levels = []
-        peaks = sorted(peaks)
+        peaks = sorted(peaks_by_time.values())
         for i, curr_peak in enumerate(peaks):
             level = None
             if i == 0:
@@ -127,7 +119,7 @@ class SymbolIndicators:
                     levels.pop()
             if level:
                 levels.append(level)
-        return levels
+        return levels, peaks_by_time
     
     @property
     def is_breakout(self):
@@ -137,7 +129,9 @@ class SymbolIndicators:
         """
         trade_bar_lts = self.trade_bar_window[0]
         trade_bar_prev = self.trade_bar_window[1]
-        for level in self.get_resistance_levels():
+        weekly_data = self.weekly_data
+        levels, peaks_by_time = self.get_resistance_levels(weekly_data)
+        for level in levels:
             if level > trade_bar_lts.High:
                 # levels are ordered in ascending order.
                 # no point in checking any more.
@@ -148,13 +142,28 @@ class SymbolIndicators:
                 continue
             daily_breakout = trade_bar_lts.Open < level and trade_bar_lts.Close > level
             gap_up_breakout = trade_bar_prev.Close < level and trade_bar_lts.Open > level
-            if daily_breakout or gap_up_breakout:
+            if (daily_breakout or gap_up_breakout) and self.vcp_in_base(weekly_data, peaks_by_time[level]):
                 return level
-            
-    @property
-    def close_range_pc(self):
-        trade_bar_lts = self.trade_bar_window[0]
-        high, low, close = trade_bar_lts.High, trade_bar_lts.Low, trade_bar_lts.Close
-        candle_size = high - low
-        close_size = close - low
-        return (close_size / candle_size) * 100
+    
+    def vcp_in_base(self, df: pd.Dataframe, base_start: datetime.datetime) -> bool:
+        df = df.loc[(df['date'] >= base_start)]
+        # Identify start of correction periods (new high after low)
+        df['new_high'] = df.high > df.high.shift(1)
+        df['new_low'] = df.low < df.low.shift(1)
+        df['correction_start'] = df.new_low & df.new_high.shift(1)
+
+        # Identify end of correction periods (new low after high)
+        df['correction_end'] = df.new_high & df.new_low.shift(1)
+
+        # Forward fill the Open price from the start of the correction
+        df.loc[df['correction_start'], 'correction_open'] = df['open']
+        df['correction_open'] = df['correction_open'].ffill()
+
+        # Calculate the correction
+        df['correction'] = np.where(df['correction_end'], (df['high'] - df['low']) / df['correction_open'], np.nan)
+
+        # Get the list of corrections
+        corrections = df.loc[df['correction_end'], 'correction'].tolist()
+        # Calculate if more than 60% of corrections are smaller than the prior one
+        smaller_corrections = [i < j for i, j in zip(corrections[:-1], corrections[1:])]
+        return sum(smaller_corrections) / len(smaller_corrections) > 0.6
