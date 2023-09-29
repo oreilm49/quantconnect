@@ -98,14 +98,16 @@ class SymbolIndicators:
         :return: set of price resistance levels.
         """
         peaks_by_time = {}
+        peaks = []
         for i in range(peak_range, len(df) - peak_range):
             greater_than_prior_prices = df.iloc[i].high > df.iloc[i - peak_range].high
             greater_than_future_prices = df.iloc[i].high > df.iloc[i + peak_range].high
             if greater_than_prior_prices and greater_than_future_prices:
-                peaks_by_time[df.iloc[i].high] = df.iloc[i].time
+                peaks_by_time[df.iloc[i].high] = df.iloc[i].name.date()
+                peaks.append(df.iloc[i].high)
         del df
         levels = []
-        peaks = sorted(peaks_by_time.values())
+        peaks = sorted(peaks)
         for i, curr_peak in enumerate(peaks):
             level = None
             if i == 0:
@@ -119,6 +121,7 @@ class SymbolIndicators:
                     levels.pop()
             if level:
                 levels.append(level)
+        self.algorithm.Log(str(peaks_by_time.keys()))
         return levels, peaks_by_time
     
     @property
@@ -145,8 +148,8 @@ class SymbolIndicators:
             if (daily_breakout or gap_up_breakout) and self.vcp_in_base(weekly_data, peaks_by_time[level]):
                 return level
     
-    def vcp_in_base(self, df: pd.Dataframe, base_start: datetime.datetime) -> bool:
-        df = df.loc[(df['date'] >= base_start)]
+    def vcp_in_base(self, df: pd.DataFrame, base_start: datetime.datetime.date) -> bool:
+        df = df.loc[base_start:datetime.datetime.now().date()]
         # Identify start of correction periods (new high after low)
         df['new_high'] = df.high > df.high.shift(1)
         df['new_low'] = df.low < df.low.shift(1)
@@ -166,4 +169,6 @@ class SymbolIndicators:
         corrections = df.loc[df['correction_end'], 'correction'].tolist()
         # Calculate if more than 60% of corrections are smaller than the prior one
         smaller_corrections = [i < j for i, j in zip(corrections[:-1], corrections[1:])]
+        if not smaller_corrections:
+            return False
         return sum(smaller_corrections) / len(smaller_corrections) > 0.6
