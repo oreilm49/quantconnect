@@ -1,6 +1,7 @@
 from AlgorithmImports import QCAlgorithm, Resolution, BrokerageName, OrderProperties, TimeInForce
 from datetime import timedelta, datetime
 from indicators import SymbolIndicators
+from sp500 import SP500_2023
 
 
 HVC = 'high volume close'
@@ -25,9 +26,10 @@ class BreakoutVCP(QCAlgorithm):
         self.screened_symbols = []
         if not self.LiveMode:
             # backtest configuration
-            self.screened_symbols = ["ASAN", "TSLA", "RBLX", "DOCN", "FTNT", "DDOG", "NET", "BILL", "NVDA", "AMBA", "INMD", "AMEH", "AEHR", "SITM", "CROX"]
-            self.SetStartDate(2021, 1, 1)
-            self.SetEndDate(2021, 12, 31)
+            # self.screened_symbols = ["ASAN", "TSLA", "RBLX", "DOCN", "FTNT", "DDOG", "NET", "BILL", "NVDA", "AMBA", "INMD", "AMEH", "AEHR", "SITM", "CROX"]
+            self.screened_symbols = SP500_2023
+            self.SetStartDate(2023, 1, 1)
+            # self.SetEndDate(2021, 12, 31)
             
 
     def live_log(self, msg):
@@ -96,9 +98,9 @@ class BreakoutVCP(QCAlgorithm):
     
     def breakout(self, symbol):
         """
-        Identifies if the stock is uptrending and is within 5% of a breakout level.
+        Identifies if the stock is uptrending and is above but within 5% of a breakout level.
         Price must be above the breakout level.
-        The breakout level must be within 10% of the 50 day high.
+        The breakout level must be within 5% of the 200 day high.
 
         :return: The breakout level or None.
         """
@@ -109,7 +111,7 @@ class BreakoutVCP(QCAlgorithm):
         level = indicators.breakout_window[0]
         if not (level * 1.05 > trade_bar_lts.Close > level):
             return
-        if indicators.max_price.Current.Value > level * 1.1:
+        if indicators.max_price.Current.Value > level * 1.05:
             return
         return level
     
