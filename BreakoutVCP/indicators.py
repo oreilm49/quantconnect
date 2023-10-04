@@ -140,12 +140,13 @@ class SymbolIndicators:
                 # no point in checking any more.
                 break
             # require above average volume
-            if not trade_bar_lts.Volume > self.sma_volume.Current.Value \
-                and not trade_bar_prev.Volume > self.sma_volume.Current.Value:
+            if not trade_bar_lts.Volume > self.sma_volume.Current.Value * 1.5 \
+                and not trade_bar_prev.Volume > self.sma_volume.Current.Value * 1.25:
                 continue
+            positive_close = trade_bar_lts.Close > trade_bar_lts.Open
             daily_breakout = trade_bar_lts.Open < level and trade_bar_lts.Close > level
             gap_up_breakout = trade_bar_prev.Close < level and trade_bar_lts.Open > level
-            if (daily_breakout or gap_up_breakout) and self.vcp_in_base(weekly_data, peaks_by_time[level]):
+            if (daily_breakout or gap_up_breakout and positive_close) and self.vcp_in_base(weekly_data, peaks_by_time[level]):
                 return level
     
     def vcp_in_base(self, df: pd.DataFrame, base_start: datetime.datetime.date) -> bool:
