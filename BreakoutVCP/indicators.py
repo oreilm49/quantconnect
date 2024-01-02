@@ -134,20 +134,23 @@ class SymbolIndicators:
         trade_bar_prev = self.trade_bar_window[1]
         weekly_data = self.weekly_data
         levels, peaks_by_time = self.get_resistance_levels(weekly_data)
-        for level in levels:
-            if level > trade_bar_lts.High:
-                # levels are ordered in ascending order.
-                # no point in checking any more.
-                break
-            # require above average volume
-            if not trade_bar_lts.Volume > self.sma_volume.Current.Value * 1.5 \
-                and not trade_bar_prev.Volume > self.sma_volume.Current.Value * 1.25:
-                continue
-            positive_close = trade_bar_lts.Close > trade_bar_lts.Open
-            daily_breakout = trade_bar_lts.Open < level and trade_bar_lts.Close > level
-            gap_up_breakout = trade_bar_prev.Close < level and trade_bar_lts.Open > level
-            if (daily_breakout or gap_up_breakout and positive_close) and self.vcp_in_base(weekly_data, peaks_by_time[level]):
-                return level
+        if not levels:
+            return
+        # get the highest resistence level
+        level = sorted(levels, reverse=True)[0]
+        if level > trade_bar_lts.High:
+            # No breakout
+            return
+        positive_close = trade_bar_lts.Close > trade_bar_lts.Open
+        prev_positive_close = trade_bar_prev.Close > trade_bar_prev.Open
+        daily_breakout = trade_bar_lts.Open < level and trade_bar_lts.Close > level
+        gap_up_breakout = trade_bar_prev.Close < level and trade_bar_lts.Open > level
+        # require above average volume
+        if not trade_bar_lts.Volume > self.sma_volume.Current.Value * 1.5 \
+            and not (trade_bar_prev.Volume > self.sma_volume.Current.Value * 1.25 and prev_positive_close):
+            return
+        if (daily_breakout or gap_up_breakout and positive_close) and self.vcp_in_base(weekly_data, peaks_by_time[level]):
+            return level
     
     def vcp_in_base(self, df: pd.DataFrame, base_start: datetime.datetime.date) -> bool:
         df = df.loc[base_start:datetime.datetime.now().date()]

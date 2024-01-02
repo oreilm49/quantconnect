@@ -2,6 +2,7 @@ from AlgorithmImports import QCAlgorithm, Resolution, BrokerageName, OrderProper
 from datetime import timedelta, datetime
 from indicators import SymbolIndicators
 from sp500 import SP500_2023
+from nasdaq100 import NASDAQ_100
 
 
 HVC = 'high volume close'
@@ -27,7 +28,7 @@ class BreakoutVCP(QCAlgorithm):
         if not self.LiveMode:
             # backtest configuration
             # self.screened_symbols = ["ASAN", "TSLA", "RBLX", "DOCN", "FTNT", "DDOG", "NET", "BILL", "NVDA", "AMBA", "INMD", "AMEH", "AEHR", "SITM", "CROX"]
-            self.screened_symbols = SP500_2023
+            self.screened_symbols = NASDAQ_100
             self.SetStartDate(2023, 1, 1)
             # self.SetEndDate(2021, 12, 31)
             
