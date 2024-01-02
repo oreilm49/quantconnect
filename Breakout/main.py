@@ -1,5 +1,4 @@
-from AlgorithmImports import QCAlgorithm, Resolution, BrokerageName, OrderProperties, TimeInForce
-from datetime import timedelta, datetime
+from AlgorithmImports import QCAlgorithm, Resolution, BrokerageName
 from indicators import SymbolIndicators
 
 
@@ -31,17 +30,34 @@ class Breakout(QCAlgorithm):
             
 
     def live_log(self, msg):
+        """
+        Sends a log message when live trading, otherwise adds a debug message.
+
+        :param msg: The message to be logged.
+        """
         if self.LiveMode:
             self.Log(msg)
         else:
             self.Debug(msg)
 
     def coarse_selection(self, coarse):
+        """
+        This is the main universe filtering method.
+        It returns a list of stock symbols which will be passed to self.OnData for processing.
+
+        :param coarse: The initial coarse list of stocks.
+        """
         if self.LiveMode:
             self.update_screened_symbols()
         return [stock.Symbol for stock in coarse if stock.Symbol.Value in self.screened_symbols]
 
     def OnData(self, data):
+        """
+        This method receives OHLC candle data and triggers buy / sell logic.
+
+        :param data: A TradeBars object containing OHLC bars for each stock.
+        """
+        
         symbols = []
         for symbol in self.ActiveSecurities.Keys:
             if symbol.Value not in self.screened_symbols:
@@ -72,6 +88,15 @@ class Breakout(QCAlgorithm):
                 self.buy(symbol, order_tag=f"{BREAKOUT}: {breakout}")
     
     def buy(self, symbol, order_tag=None, order_properties=None, price=None):
+        """
+        Generates a market order for a stock.
+        
+        :param symbol: The stock symbol being traded.
+        :param order_tag: An order tag string which can be used for reporting.
+        :param order_properties: Custom order properties which can be used for stop market orders.
+        :param price: If defined, then a stop market order will be generated at the specified price.
+        """
+        
         position_size = self.get_position_size(symbol)
         position_value = position_size * self.ActiveSecurities[symbol].Price
         if position_value < self.Portfolio.Cash:
@@ -86,15 +111,23 @@ class Breakout(QCAlgorithm):
 
     def get_position_size(self, symbol):
         """
-        Gets the lowest risk position size
-        volatility_size = ($total equity * portfolio risk %) / ATR(21)
-        risk_size = ($total equity * portfolio risk %) / $value of risk on trade
+        Gets the lowest risk position size based on either volatility or risk:
+            volatility_size = ($total equity * portfolio risk %) / ATR(21)
+            risk_size = ($total equity * portfolio risk %) / $value of risk on trade
+        :param symbol: The stock symbol being traded.
         """
         volatility_size = (self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / self.symbol_map[symbol].atr.Current.Value
         risk_size = (self.Portfolio.TotalPortfolioValue * self.EQUITY_RISK_PC) / (self.ActiveSecurities[symbol].Price * (self.SL_RISK_PC * -1))
         return round(min(volatility_size, risk_size))
     
     def sell_signal(self, symbol, slice):
+        """
+        Returns a boolean signal confirming if a stock should be sold.
+
+        :param symbol: The stock symbol.
+        :param slice: A TradeBars slice object containing OHLC data for a single period.
+        """
+        
         profit = self.Portfolio[symbol].UnrealizedProfitPercent
         return profit >= self.TP_TARGET or profit <= self.SL_RISK_PC
     
@@ -111,8 +144,8 @@ class Breakout(QCAlgorithm):
         · Gap to new highs or within 20% of prior highs         
         The closing price of the gap up on day 1 is the High Volume Close (HVC). 
         Exit: 3-5% hard stop below the HVC OR an end-of-day close below this level depending on the market environment. 
-        Note: 
-        - removed gap up logic 
+
+        :param symbol: The stock symbol.
         """ 
         indicators: SymbolIndicators = self.symbol_map[symbol] 
         trade_bar_lts = indicators.trade_bar_window[0] 
@@ -141,6 +174,8 @@ class Breakout(QCAlgorithm):
         Must occur within a general market uptrend.
         Entry:
             Price closes above the high of the first day after the pattern.
+
+        :param symbol: The stock symbol.
         """ 
         indicators: SymbolIndicators = self.symbol_map[symbol] 
         trade_bar_lts = indicators.trade_bar_window[0] 
@@ -170,6 +205,7 @@ class Breakout(QCAlgorithm):
         Price must be above the breakout level.
         The breakout level must be within 10% of the 50 day high.
 
+        :param symbol: The stock symbol.
         :return: The breakout level or None.
         """
         indicators: SymbolIndicators = self.symbol_map[symbol]
@@ -184,6 +220,9 @@ class Breakout(QCAlgorithm):
         return level
     
     def update_screened_symbols(self):
+        """
+        When in live mode, updates the stock list filter based on stocks in a google sheet.
+        """
         self.screened_symbols = self.Download(self.SYMBOLS_URL).split("\r\n")
         self.live_log(f"symbols updated: {','.join(self.screened_symbols)}")
         for symbol in list(self.symbol_map.keys()):
