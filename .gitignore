@@ -3,7 +3,9 @@
 lean.json
 */backtests
 */.idea
+*.idea
 */.vscode
 *.pyc
 /backtest_reports
 *.csv
+*/config.json

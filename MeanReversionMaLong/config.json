@@ -1,8 +1,0 @@
-{
-    "algorithm-language": "Python",
-    "parameters": {},
-    "description": "mean reversion exploiting pullbacks to 21EMA for uptrending stocks.",
-    "cloud-id": 12142082,
-    "organization-id": "a498f5e0f72498984b9dff7cadd979b3",
-    "python-venv": 1
-}
